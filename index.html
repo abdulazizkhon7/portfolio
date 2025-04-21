@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Abu's Portfolio - Futuristic design and interactive features showcasing my projects and skills.">
+    <meta name="keywords" content="Abu, Portfolio, Web Development, Projects, Skills">
+    <meta name="author" content="Abu">
+    <title>アブのポートフォリオ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <!-- Raketa va yulduzlar -->
+    <div id="rocket-section">
+        <div class="star-container" id="star-container"></div>
+        <img src="rocket.png" class="rocket-container" id="rocket">
+    </div>
+
+    <!-- Yulduzlar fon animatsiyasi -->
+    <div class="stars"></div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-animation"></div>
+    </div>
+    <main id="Portfolio ">
+        <!-- Sahifa Kontenti -->
+        <div class="container">
+            <!-- Header -->
+            <nav class="navbar">
+                <h2 class="a2">ウア.</h2>
+
+                <!-- Musiqa tugmasi (o‘rtada doimiy ko'rinadi) -->
+                <!-- Ovoz tugmasi -->
+                <audio id="background-music" loop>
+                    <source src="music.mp3" type="audio/mp3">
+                    Your browser does not support the audio element.
+                </audio>
+                <button id="music-toggle" class="music-button">▶</button>
+
+                <!-- Email va GitHub ikonkalari (o'ng yuqorida doimiy ko'rinadi) -->
+                <div class="icon-link">
+                    <a href="mailto:abdulazizkhonumarkhonov@gmail.com" target="_blank">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                    <a href="https://github.com/abdulazizkhon7" target="_blank">
+                        <i class="fab fa-github"></i>
+                    </a>
+                </div>
+
+                <!-- Hamburger tugmasi -->
+                <div class="menu-btn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <!-- faqat menyular -->
+                <ul class="nav-menu">
+                    <li class="menu-item"><a href="#home" class="nav-link">ホーム</a></li>
+                    <li class="menu-item"><a href="#about" class="nav-link">自己紹介</a></li>
+                    <li class="menu-item"><a href="#skills" class="nav-link">スキル</a></li>
+                    <li class="menu-item"><a href="#projects" class="nav-link">プロジェクト</a></li>
+                    <li class="menu-item"><a href="#contact" class="nav-link">コンタクト</a></li>
+                </ul>
+            </nav>
+
+
+            <section id="home" class="home-section">
+                <div class="home-left">
+                    <h1>こんにちは </h1>
+                    <h1>私は アブです.</h1>
+                    <div class="typing-container">
+                        <p id="dynamic-text"></p>
+                    </div>
+                </div>
+                <div id="lottie-animation" class="lottie-animation"></div>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.8/lottie.min.js"></script>
+            </section>
+
+            <section id="about" class="about-section">
+                <div>
+                    <h2 class="about-title"> 自己紹介</h2>
+                </div>
+                <div class="about-container">
+                    <!-- Chap tomon: Animatsiya -->
+                    <div class="about-animation-container">
+                        <div id="about-animation"></div>
+                    </div>
+                    <!-- O‘ng tomon: Forma Bio, Focus, Hobbies -->
+                    <div class="about-details">
+                        <div class="about-form">
+                            <!-- Bo‘limlar tugmalari -->
+                            <div class="about-buttons">
+                                <button class="tab-button" data-target="quick-bio">自己紹介</button>
+                                <button class="tab-button" data-target="current-focus">フォーカス</button>
+                                <button class="tab-button" data-target="hobbies">趣味</button>
+                            </div>
+                            <!-- Quick Bio -->
+                            <div class="about-section-content active" id="quick-bio">
+                                <div class="quick-bio-container">
+                                    <div class="quick-bio-text">
+                                        <h2>🧑‍💻</h2>
+                                        <p class="a1">
+                                            こんにちは！私はアブです。私は21歳で、<br>
+                                            現在フォーラム情報アカデミー専門学校で<br>
+                                            ITを勉強しています。
+                                            ITは私の情熱です。
+                                            <br>HTML, CSS, JavaScript, Python, MySQLを活用し、
+                                            最新のテクノロジーでウェブアプリを開発しています。<br>
+                                            代表的なプロジェクト：<strong>クラス日誌</strong>（学生向け目標管理システム）
+                                        </p>
+                                    </div>
+                                    <!-- Rasm qismi -->
+                                    <div class="quick-bio-image">
+                                        <img src="jj.jpg" alt="Abu's Photo" class="bio-photo">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current Focus -->
+                            <div class="about-section-content" id="current-focus">
+                                <h2>🎯</h2>
+                                <p class="a0">
+                                    現在、プログラミングスキル向上と日本語能力強化に集中しています。<br>
+                                    特にバックエンド開発、データベース管理、フロントエンドデザインを深く学んでいます。<br>
+                                    将来的には、日本のIT企業で働き、革新的なプロジェクトに貢献したいと考えています。
+                                </p>
+                            </div>
+
+                            <!-- Hobbies -->
+                            <div class="about-section-content" id="hobbies">
+                                <h2>🎵🏕️📈📱🔧</h2>
+                                <p class="a3">
+                                    私は自然探検や音楽鑑賞が好きです。<br>
+                                    また、自己成長のために以下の分野にも興味を持っています：<br>
+                                    ✔ マーケティング <br>
+                                    ✔ トレーディング & 投資（Forex、仮想通貨）<br>
+                                    ✔ スマートフォン修理（複数の端末を修理した経験あり）
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <section id="skills" class="skills-container">
+                <!-- Chap tomonda animatsiya -->
+                <div class="skills-animation" id="skills-animation"></div>
+                <div class="skh2"> スキル </div>
+                <!-- Font Awesome uchun CDN -->
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+                    rel="stylesheet">
+                <!-- O‘ng tomonda logotiplar va progress barlar -->
+                <div class="skills-logos">
+                    <div class="skill-bar-container">
+                        <!-- HTML -->
+                        <div class="skill-bar">
+                            <i class="fab fa-html5"></i>
+                            <span>HTML</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="25%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <!-- CSS -->
+                        <div class="skill-bar">
+                            <i class="fab fa-css3-alt"></i>
+                            <span>CSS</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="30%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <!-- JavaScript -->
+                        <div class="skill-bar">
+                            <i class="fab fa-js"></i>
+                            <span>JavaScript</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="25%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <!-- Python -->
+                        <div class="skill-bar">
+                            <i class="fab fa-python"></i>
+                            <span>Python</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="20%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <!-- Flask/Django -->
+                        <div class="skill-bar">
+                            <i class="fas fa-flask"></i>
+                            <span>Flask</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="25%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <!-- MySQL -->
+                        <div class="skill-bar">
+                            <i class="fas fa-database"></i>
+                            <span>Database</span>
+                            <div class="progress">
+                                <div class="progress-bar" data-width="30%" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="projects" class="projects-section">
+                <div class="project-logos">プロジェクト</div>
+                <div class="projects-container" id="projects-container">
+                    <!-- Modal oyna loyihalar haqida batafsil ko‘rsatish uchun -->
+                    <div id="project-modal" class="modal">
+                        <div class="modal-content">
+                            <span class="close-modal">&times;</span>
+                            <h3 id="modal-title"></h3>
+                            <img id="modal-image" src="" alt="Project Image">
+                            <p id="modal-description"></p>
+                            <a id="modal-link" href="#" target="_blank">プロジェクトを見る</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="contact-section">
+                <h2 class="contact-title">コンタクト</h2>
+                <div class="contact-content">
+                    <form id="contact-form" action="https://formspree.io/f/xeoeryrr" method="POST">
+                        <div class="contact-header">
+                            <h3>ご不明な点がありましたら</h3>
+                            <h3>お気軽にご連絡ください。</h3>
+                        </div>
+                        <input type="text" name="name" placeholder="お名前" required>
+                        <input type="email" name="email" placeholder="メールアドレス" required>
+                        <textarea name="message" placeholder="メッセージ" rows="5" required></textarea>
+                        <button type="submit">メッセージを送信</button>
+                    </form>
+                    <!-- O‘ng tomon: Aloqa ma'lumotlari va ikonlar -->
+                    <div id="soc" class="contact-details">
+                        <div class="contact-info">
+                            <p><i class="fas fa-phone"></i> +81 80-4321-4141</p>
+                            <p><i class="fas fa-envelope"></i> abdulazizkhonumarkhonov@gmail.com</p>
+                            <p><i class="fas fa-map-marker-alt"></i> 新潟県新潟市中央区長嶺町</p>
+                        </div>
+                        <!-- Ijtimoiy tarmoq ikonkalari -->
+                        <div class="social-icons">
+                            <!-- Font Awesome 6.4.2 CDN -->
+                            <link rel="stylesheet"
+                                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+                            <a href="https://www.facebook.com/mrxjapan" target="_blank"><i
+                                    class="fab fa-facebook"></i></a>
+                            <a href="https://t.me/tekkinuz" target="_blank"><i class="fab fa-telegram"></i></a>
+                            <a href="https://twitter.com/abu_mlx" target="_blank"><i class="fab fa-x-twitter"></i></a>
+                            <a href="https://www.instagram.com/csatunrv" target="_blank"><i
+                                    class="fab fa-instagram"></i></a>
+                            <a href="https://www.tiktok.com/@avva_ru" target="_blank"><i
+                                    class="fab fa-tiktok"></i></a>
+                        </div>
+                        <a href="Umarkhonov Abdulazizkhon.pdf" download class="resume-button">履歴書をダウンロード</a>
+                    </div>
+                </div>
+            </section>
+                        <!-- Futuristic Back to Top Button -->
+            <a href="#" class="back-to-top-futuristic" id="backToTop">
+                <span class="arrow">↑</span>
+            </a>
+            <div>
+            <!-- Footer -->
+            <footer class="footer-container">
+                <p>&copy; 2025 アブのポートフォリオ 全著作権所有</p>
+            </footer>
+        </div>
+    
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.8/lottie.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
