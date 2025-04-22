@@ -1079,6 +1079,7 @@
 }
 
 
+
 /* Umumiy responsiv sozlamalar (Telefon uchun) */
 @media (max-width: 768px)  {
   
@@ -1286,21 +1287,13 @@
 
   }
 
-  /* Raketa va loading ekran uchun */
-  .rocket {
-      width: 60px; /* kichraytirish */
-  }
+
 
   .star, .stars div {
       width: 1px;
       height: 1px;
   }
 
-  /* Animatsiyalar uchun kichik tuzatish */
-  @keyframes launch {
-      0% { bottom: -50px; }
-      100% { bottom: 90vh; } /* ekrandan chiqib ketmasligi uchun */
-  }
 
   #loading-animation {
       width: 80px;
