@@ -7,6 +7,7 @@
     "check": "npx --yes hyperframes@0.8.81 check --timeout 60000",
     "render": "npx --yes hyperframes@0.8.81 render --fps 60 --quality delivery --output renders/avzon-showreel-master.mp4",
     "publish": "npx --yes hyperframes@0.8.81 publish",
-    "score": "python3 tools/score.py \"${HF_SFX_DIR:-$HOME/.claude/skills/media-use/audio/assets/sfx}\" assets/audio/score.wav"
+    "score": "python3 tools/score.py \"${HF_SFX_DIR:-$HOME/.claude/skills/media-use/audio/assets/sfx}\" assets/audio/score.wav",
+    "encode:web": "ffmpeg -y -i renders/avzon-showreel-master.mp4 -c:v libx264 -preset slow -crf 19 -profile:v high -level:v 4.2 -pix_fmt yuv420p -movflags +faststart -c:a copy renders/avzon-showreel.mp4"
   }
 }
