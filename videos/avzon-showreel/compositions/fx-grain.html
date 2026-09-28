@@ -29,9 +29,12 @@
         (function () {
           // ── Film grain: a seeded gaussian tile, re-offset at 24 Hz ───────
           // Composited soft-light by the host slot. Beyond texture, it dithers
-          // the dark radial glows so they don't band under H.264.
+          // the dark radial glows so they don't band under H.264. The tile is
+          // generated at half resolution and drawn 2× with smoothing: ≈2 px
+          // clumps (35 mm-like at 1080p) whose energy sits in frequencies the
+          // encoder keeps, instead of per-pixel noise that it cannot compress.
           var DUR = 15;
-          var TILE = 384;
+          var TILE = 192; // drawn at 2× → a 384 px repeat
           var tl = gsap.timeline({ paused: true });
 
           function mulberry32(seed) {
@@ -70,13 +73,15 @@
           tctx.putImageData(img, 0, 0);
           var pattern = gctx.createPattern(tile, "repeat");
 
+          gctx.imageSmoothingEnabled = true;
+          gctx.imageSmoothingQuality = "high";
           function draw(t) {
             var step = Math.floor(t * 24 + 1e-6);
             var ox = Math.floor(hash01(step, 11) * TILE);
             var oy = Math.floor(hash01(step, 29) * TILE);
-            gctx.setTransform(1, 0, 0, 1, ox, oy);
+            gctx.setTransform(2, 0, 0, 2, ox * 2, oy * 2);
             gctx.fillStyle = pattern;
-            gctx.fillRect(-ox, -oy, 1920, 1080);
+            gctx.fillRect(-ox, -oy, 960, 540);
           }
           var drv = { _t: 0 };
           Object.defineProperty(drv, "t", {
