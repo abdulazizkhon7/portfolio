@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · S5 Lockup</title>
+  </head>
+  <body>
+    <template id="s5-lockup-template">
+      <style>
+        @font-face {
+          font-family: "AVZ Archivo";
+          src: url("assets/fonts/archivo-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-stretch: 62% 125%;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "AVZ Mono";
+          src: url("assets/fonts/geist-mono-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: #050608;
+        }
+        #s5-all {
+          position: absolute;
+          inset: 0;
+          transform-origin: 960px 540px;
+          will-change: transform, opacity;
+        }
+        #s5-bloom {
+          position: absolute;
+          left: 160px;
+          top: 147px;
+          width: 1600px;
+          height: 680px;
+          background: radial-gradient(
+            ellipse 50% 50% at 50% 50%,
+            rgba(154, 166, 255, 0.2) 0%,
+            rgba(75, 95, 255, 0.11) 34%,
+            rgba(75, 95, 255, 0.035) 62%,
+            rgba(75, 95, 255, 0) 80%
+          );
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+        #s5-oflare {
+          position: absolute;
+          left: 860px;
+          top: 187px;
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(255, 255, 255, 0.85) 0%,
+            rgba(242, 240, 235, 0.4) 10%,
+            rgba(154, 166, 255, 0.18) 28%,
+            rgba(75, 95, 255, 0) 60%
+          );
+          mix-blend-mode: screen;
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+        #s5-svg {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+          overflow: visible;
+        }
+        .s5-gl path {
+          fill: #f2f0eb;
+          fill-opacity: 0;
+          stroke: #f2f0eb;
+          stroke-width: 2.6;
+          stroke-linejoin: miter;
+        }
+        #s5-guides line,
+        #s5-guides path,
+        #s5-guides circle {
+          fill: none;
+          stroke: #f2f0eb;
+          stroke-opacity: 0.34;
+          stroke-width: 1.3;
+        }
+        #s5-guides .dash {
+          stroke-dasharray: 7 6;
+        }
+        #s5-guides .ion {
+          stroke: #9aa6ff;
+          stroke-opacity: 0.6;
+        }
+        #s5-horizon {
+          position: absolute;
+          left: 60px;
+          top: 621px;
+          width: 1800px;
+          height: 2px;
+          background: linear-gradient(
+            90deg,
+            rgba(75, 95, 255, 0) 0%,
+            rgba(75, 95, 255, 0.55) 16%,
+            rgba(242, 240, 235, 0.95) 50%,
+            rgba(75, 95, 255, 0.55) 84%,
+            rgba(75, 95, 255, 0) 100%
+          );
+          transform-origin: 50% 50%;
+          transform: scaleX(0);
+        }
+        #s5-horizon-glow {
+          position: absolute;
+          left: 360px;
+          top: 598px;
+          width: 1200px;
+          height: 48px;
+          background: radial-gradient(
+            ellipse 50% 50% at 50% 50%,
+            rgba(154, 166, 255, 0.28) 0%,
+            rgba(75, 95, 255, 0.08) 45%,
+            rgba(75, 95, 255, 0) 100%
+          );
+          opacity: 0;
+        }
+        #s5-tag {
+          position: absolute;
+          left: 0;
+          top: 664px;
+          width: 1920px;
+          display: flex;
+          justify-content: center;
+          font-family: "AVZ Archivo", sans-serif;
+          font-stretch: 125%;
+          font-weight: 300;
+          font-size: 28px;
+          line-height: 1;
+          letter-spacing: 0.42em;
+          color: #c9cbd1;
+          white-space: nowrap;
+          opacity: 0;
+        }
+        #s5-tag-in {
+          display: inline-block;
+          padding-left: 0.42em;
+        }
+        #s5-tag .ch {
+          display: inline-block;
+          white-space: pre;
+          will-change: transform;
+        }
+        #s5-soon {
+          position: absolute;
+          left: 0;
+          top: 944px;
+          width: 1920px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 18px;
+          font-family: "AVZ Mono", monospace;
+          font-size: 22px;
+          font-weight: 500;
+          letter-spacing: 0.34em;
+          color: #a9aeb8;
+          white-space: pre;
+          opacity: 0;
+        }
+        #s5-dot {
+          display: block;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: #4b5fff;
+          box-shadow: 0 0 14px 2px rgba(75, 95, 255, 0.7);
+        }
+        #s5-soon-txt {
+          padding-left: 0.34em;
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="s5-lockup"
+        data-width="1920"
+        data-height="1080"
+        data-duration="5"
+      >
+        <div id="s5-all" data-layout-allow-overflow>
+          <div id="s5-bloom"></div>
+          <div id="s5-horizon-glow"></div>
+          <div id="s5-horizon"></div>
+
+          <!-- 1 unit = 0.95 px; wordmark origin (0,0) sits at (426.33, 392) px -->
+          <svg id="s5-svg" viewBox="-448.77 -412.63 2021.05 1136.84" aria-hidden="true">
+            <defs>
+              <filter id="s5-blur-a" x="-20%" y="-60%" width="140%" height="220%">
+                <feGaussianBlur id="s5-blur-a-n" stdDeviation="0 0" />
+              </filter>
+              <filter id="s5-blur-b" x="-20%" y="-60%" width="140%" height="220%">
+                <feGaussianBlur id="s5-blur-b-n" stdDeviation="0 0" />
+              </filter>
+              <filter id="s5-bloomf" x="-30%" y="-80%" width="160%" height="260%">
+                <feGaussianBlur stdDeviation="9" />
+              </filter>
+              <linearGradient
+                id="s5-glint-grad"
+                gradientUnits="userSpaceOnUse"
+                x1="-110"
+                y1="60"
+                x2="110"
+                y2="-60"
+              >
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0" />
+                <stop offset="0.4" stop-color="#ffffff" stop-opacity="0" />
+                <stop offset="0.5" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="0.6" stop-color="#ffffff" stop-opacity="0" />
+                <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+              </linearGradient>
+              <clipPath id="s5-oclip">
+                <path
+                  transform="translate(671.23 0)"
+                  clip-rule="evenodd"
+                  d="M 0.00 100.00 A 101.50 101.50 0 1 1 203.00 100.00 A 101.50 101.50 0 1 1 0.00 100.00 Z M 34.32 100.00 A 67.18 67.18 0 1 0 168.68 100.00 A 67.18 67.18 0 1 0 34.32 100.00 Z"
+                />
+              </clipPath>
+            </defs>
+
+            <!-- construction guides -->
+            <g id="s5-guides">
+              <line id="s5-gd-cap" x1="-150" y1="0" x2="1273.5" y2="0" />
+              <line id="s5-gd-base" x1="-150" y1="200" x2="1273.5" y2="200" />
+              <line class="s5-gv" x1="0" y1="-48" x2="0" y2="248" />
+              <line class="s5-gv" x1="200" y1="-48" x2="200" y2="248" />
+              <line class="s5-gv" x1="175.53" y1="-48" x2="175.53" y2="248" />
+              <line class="s5-gv" x1="375.53" y1="-48" x2="375.53" y2="248" />
+              <line class="s5-gv" x1="421.93" y1="-48" x2="421.93" y2="248" />
+              <line class="s5-gv" x1="621.93" y1="-48" x2="621.93" y2="248" />
+              <line class="s5-gv" x1="671.23" y1="-48" x2="671.23" y2="248" />
+              <line class="s5-gv" x1="874.23" y1="-48" x2="874.23" y2="248" />
+              <line class="s5-gv" x1="923.53" y1="-48" x2="923.53" y2="248" />
+              <line class="s5-gv" x1="1123.53" y1="-48" x2="1123.53" y2="248" />
+              <!-- Λ / V: the shared diagonal, drawn long so the parallel channel reads -->
+              <line class="s5-gd ion" x1="93.19" y1="-60" x2="224.65" y2="260" />
+              <line class="s5-gd ion" x1="150.88" y1="-60" x2="282.34" y2="260" />
+              <!-- O construction -->
+              <circle class="s5-gd dash" cx="772.73" cy="100" r="101.5" />
+              <circle class="s5-gd dash" cx="772.73" cy="100" r="67.18" />
+              <line class="s5-gd" x1="642.73" y1="100" x2="902.73" y2="100" />
+              <line class="s5-gd" x1="772.73" y1="-30" x2="772.73" y2="230" />
+            </g>
+
+            <!-- the mark: V Λ N ○ Z decodes to Λ V Z O N -->
+            <g transform="translate(0 0)">
+              <g id="s5-gl-1" class="s5-gl" filter="url(#s5-blur-a)">
+                <path id="s5-p1" d="M 0.00 200.00 82.16 0.00 117.84 0.00 200.00 200.00 164.32 200.00 100.00 43.42 35.68 200.00 Z" />
+              </g>
+            </g>
+            <g transform="translate(175.53 0)">
+              <g id="s5-gl-2" class="s5-gl" filter="url(#s5-blur-a)">
+                <path id="s5-p2" d="M 0.00 0.00 82.16 200.00 117.84 200.00 200.00 0.00 164.32 0.00 100.00 156.58 35.68 0.00 Z" />
+              </g>
+            </g>
+            <g transform="translate(421.93 0)">
+              <g id="s5-gl-3" class="s5-gl" filter="url(#s5-blur-b)">
+                <path id="s5-p3" d="M 0.00 0.00 200.00 0.00 200.00 33.00 49.61 167.00 200.00 167.00 200.00 200.00 0.00 200.00 0.00 167.00 150.39 33.00 0.00 33.00 Z" />
+              </g>
+            </g>
+            <g transform="translate(671.23 0)">
+              <g id="s5-gl-4" class="s5-gl">
+                <path
+                  id="s5-p4"
+                  fill-rule="evenodd"
+                  d="M 0.00 100.00 A 101.50 101.50 0 1 1 203.00 100.00 A 101.50 101.50 0 1 1 0.00 100.00 Z M 34.32 100.00 A 67.18 67.18 0 1 0 168.68 100.00 A 67.18 67.18 0 1 0 34.32 100.00 Z"
+                />
+              </g>
+            </g>
+            <g transform="translate(923.53 0)">
+              <g id="s5-gl-5" class="s5-gl" filter="url(#s5-blur-b)">
+                <path id="s5-p5" d="M 200.00 0.00 200.00 200.00 167.00 200.00 33.00 49.61 33.00 200.00 0.00 200.00 0.00 0.00 33.00 0.00 167.00 150.39 167.00 0.00 Z" />
+              </g>
+            </g>
+
+            <!-- the O's rim glint (landing spin, final wink), clipped to the ring -->
+            <g clip-path="url(#s5-oclip)">
+              <g id="s5-oglint" opacity="0">
+                <path
+                  d="M 772.73 15.66 A 84.34 84.34 0 0 1 857.07 100"
+                  fill="none"
+                  stroke="#ffffff"
+                  stroke-opacity="0.28"
+                  stroke-width="36"
+                />
+                <path
+                  d="M 772.73 15.66 A 84.34 84.34 0 0 1 832.37 40.36"
+                  fill="none"
+                  stroke="#ffffff"
+                  stroke-opacity="0.8"
+                  stroke-width="36"
+                />
+              </g>
+            </g>
+
+            <!-- specular glint sweep + bloom, over the finished mark -->
+            <g id="s5-glint-bloom" filter="url(#s5-bloomf)" opacity="0" style="mix-blend-mode: screen">
+              <path transform="translate(0.00 0)" fill="url(#s5-glint-grad)" d="M 0.00 200.00 82.16 0.00 117.84 0.00 200.00 200.00 164.32 200.00 100.00 43.42 35.68 200.00 Z" />
+              <path transform="translate(175.53 0)" fill="url(#s5-glint-grad)" d="M 0.00 0.00 82.16 200.00 117.84 200.00 200.00 0.00 164.32 0.00 100.00 156.58 35.68 0.00 Z" />
+              <path transform="translate(421.93 0)" fill="url(#s5-glint-grad)" d="M 0.00 0.00 200.00 0.00 200.00 33.00 49.61 167.00 200.00 167.00 200.00 200.00 0.00 200.00 0.00 167.00 150.39 33.00 0.00 33.00 Z" />
+              <path transform="translate(671.23 0)" fill-rule="evenodd" fill="url(#s5-glint-grad)" d="M 0.00 100.00 A 101.50 101.50 0 1 1 203.00 100.00 A 101.50 101.50 0 1 1 0.00 100.00 Z M 34.32 100.00 A 67.18 67.18 0 1 0 168.68 100.00 A 67.18 67.18 0 1 0 34.32 100.00 Z" />
+              <path transform="translate(923.53 0)" fill="url(#s5-glint-grad)" d="M 200.00 0.00 200.00 200.00 167.00 200.00 33.00 49.61 33.00 200.00 0.00 200.00 0.00 0.00 33.00 0.00 167.00 150.39 167.00 0.00 Z" />
+            </g>
+            <g id="s5-glint" opacity="0">
+              <path transform="translate(0.00 0)" fill="url(#s5-glint-grad)" d="M 0.00 200.00 82.16 0.00 117.84 0.00 200.00 200.00 164.32 200.00 100.00 43.42 35.68 200.00 Z" />
+              <path transform="translate(175.53 0)" fill="url(#s5-glint-grad)" d="M 0.00 0.00 82.16 200.00 117.84 200.00 200.00 0.00 164.32 0.00 100.00 156.58 35.68 0.00 Z" />
+              <path transform="translate(421.93 0)" fill="url(#s5-glint-grad)" d="M 0.00 0.00 200.00 0.00 200.00 33.00 49.61 167.00 200.00 167.00 200.00 200.00 0.00 200.00 0.00 167.00 150.39 33.00 0.00 33.00 Z" />
+              <path transform="translate(671.23 0)" fill-rule="evenodd" fill="url(#s5-glint-grad)" d="M 0.00 100.00 A 101.50 101.50 0 1 1 203.00 100.00 A 101.50 101.50 0 1 1 0.00 100.00 Z M 34.32 100.00 A 67.18 67.18 0 1 0 168.68 100.00 A 67.18 67.18 0 1 0 34.32 100.00 Z" />
+              <path transform="translate(923.53 0)" fill="url(#s5-glint-grad)" d="M 200.00 0.00 200.00 200.00 167.00 200.00 33.00 49.61 33.00 200.00 0.00 200.00 0.00 0.00 33.00 0.00 167.00 150.39 167.00 0.00 Z" />
+            </g>
+          </svg>
+
+          <div id="s5-oflare"></div>
+          <div id="s5-tag"><span id="s5-tag-in">ENGINEERED FOR WHAT’S NEXT</span></div>
+          <div id="s5-soon"><span id="s5-dot"></span><span id="s5-soon-txt">COMING SOON</span></div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Scene 5 · LOCKUP ──────────────────────────────────────────────
+          // The mark enters scrambled (V Λ N ○ Z) and decodes through its own
+          // geometry: Λ is V flipped, Z is N rotated 90°. Local t=0 is 10.00 s.
+          var tl = gsap.timeline({ paused: true });
+
+          function hash01(a, b) {
+            var h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+            h ^= h >>> 16;
+            h = Math.imul(h, 0x7feb352d);
+            h ^= h >>> 15;
+            return (h >>> 0) / 4294967296;
+          }
+          function proxy(apply) {
+            var d = { _v: 0 };
+            Object.defineProperty(d, "v", {
+              get: function () {
+                return this._v;
+              },
+              set: function (x) {
+                this._v = x;
+                apply(x);
+              },
+            });
+            return d;
+          }
+
+          // ── construction guides draw on, center-out ──────────────────────
+          var guides = document.querySelectorAll("#s5-guides line, #s5-guides circle");
+          guides.forEach(function (g) {
+            var len = g.getTotalLength();
+            var dashed = g.classList.contains("dash");
+            if (!dashed) g.setAttribute("stroke-dasharray", len + " " + len);
+            var bb = g.getBBox();
+            var cx = bb.x + bb.width / 2;
+            var delay = Math.min(0.2, (Math.abs(cx - 561.77) / 700) * 0.2);
+            if (dashed) {
+              tl.fromTo(g, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 0.08 + delay);
+            } else {
+              tl.fromTo(
+                g,
+                { attr: { "stroke-dashoffset": len } },
+                { attr: { "stroke-dashoffset": 0 }, duration: 0.42, ease: "power2.out" },
+                0.02 + delay,
+              );
+            }
+          });
+          tl.to("#s5-guides", { opacity: 0, duration: 0.5, ease: "power2.inOut" }, 1.25);
+
+          // ── the O lands: the Halo seats as the axle ──────────────────────
+          tl.fromTo(
+            "#s5-gl-4",
+            { scale: 2.4, opacity: 0, transformOrigin: "50% 50%" },
+            { scale: 1, opacity: 1, duration: 0.5, ease: "power4.out" },
+            0.06,
+          );
+          tl.set("#s5-oglint", { rotation: -40, opacity: 0, svgOrigin: "772.73 100" }, 0);
+          tl.fromTo(
+            "#s5-oglint",
+            { rotation: -40, svgOrigin: "772.73 100" },
+            { rotation: 520, svgOrigin: "772.73 100", duration: 0.62, ease: "power3.out", immediateRender: false },
+            0.06,
+          );
+          tl.fromTo("#s5-oglint", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "power1.out", immediateRender: false }, 0.06);
+          tl.to("#s5-oglint", { opacity: 0, duration: 0.25, ease: "power2.in" }, 0.5);
+          tl.fromTo(
+            "#s5-oflare",
+            { opacity: 0, scale: 0.4 },
+            { opacity: 1, scale: 1, duration: 0.16, ease: "power2.out" },
+            0.1,
+          );
+          tl.to("#s5-oflare", { opacity: 0, scale: 1.35, duration: 0.6, ease: "power2.out" }, 0.26);
+
+          // ── chevrons drop in (as V Λ), streaked on the vertical axis ─────
+          var blurA = document.getElementById("s5-blur-a-n");
+          var blurB = document.getElementById("s5-blur-b-n");
+          tl.fromTo(
+            proxy(function (x) {
+              blurA.setAttribute("stdDeviation", "0 " + x.toFixed(2));
+            }),
+            { v: 18 },
+            { v: 0, duration: 0.36, ease: "power4.out" },
+            0.2,
+          );
+          tl.fromTo(
+            proxy(function (x) {
+              blurB.setAttribute("stdDeviation", "0 " + x.toFixed(2));
+            }),
+            { v: 18 },
+            { v: 0, duration: 0.36, ease: "power4.out" },
+            0.27,
+          );
+          tl.fromTo(
+            "#s5-gl-1",
+            { y: -150, scaleY: -1, opacity: 0, transformOrigin: "50% 50%" },
+            { y: 0, scaleY: -1, opacity: 1, transformOrigin: "50% 50%", duration: 0.36, ease: "power4.out" },
+            0.2,
+          );
+          tl.fromTo(
+            "#s5-gl-2",
+            { y: -150, scaleY: -1, opacity: 0, transformOrigin: "50% 50%" },
+            { y: 0, scaleY: -1, opacity: 1, transformOrigin: "50% 50%", duration: 0.36, ease: "power4.out" },
+            0.25,
+          );
+          // ── strokes rise in (as N … Z) ───────────────────────────────────
+          tl.fromTo(
+            "#s5-gl-3",
+            { y: 150, rotation: 90, opacity: 0, transformOrigin: "50% 50%" },
+            { y: 0, rotation: 90, opacity: 1, transformOrigin: "50% 50%", duration: 0.36, ease: "power4.out" },
+            0.27,
+          );
+          tl.fromTo(
+            "#s5-gl-5",
+            { y: 150, rotation: -90, opacity: 0, transformOrigin: "50% 50%" },
+            { y: 0, rotation: -90, opacity: 1, transformOrigin: "50% 50%", duration: 0.36, ease: "power4.out" },
+            0.31,
+          );
+
+          // ── the decode: counter-flips and counter-rotations ──────────────
+          tl.fromTo("#s5-gl-1", { scaleY: -1 }, { scaleY: 1, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 0.64);
+          tl.fromTo("#s5-gl-2", { scaleY: -1 }, { scaleY: 1, duration: 0.45, ease: "power3.inOut", immediateRender: false }, 0.64);
+          // edge-on glint: the outline flares as each chevron passes through 0
+          tl.fromTo("#s5-gl-1 path, #s5-gl-2 path", { strokeWidth: 2.6 }, { strokeWidth: 5.5, duration: 0.075, ease: "power2.in", immediateRender: false }, 0.79);
+          tl.to("#s5-gl-1 path, #s5-gl-2 path", { strokeWidth: 2.6, duration: 0.16, ease: "power2.out" }, 0.865);
+          tl.fromTo("#s5-gl-3", { rotation: 90 }, { rotation: 0, duration: 0.46, ease: "back.out(1.15)", immediateRender: false }, 0.68);
+          tl.fromTo("#s5-gl-5", { rotation: -90 }, { rotation: 0, duration: 0.46, ease: "back.out(1.15)", immediateRender: false }, 0.68);
+
+          // ── materialize: outlines fill solid as each glyph locks ─────────
+          tl.fromTo("#s5-p4", { fillOpacity: 0 }, { fillOpacity: 1, duration: 0.24, ease: "power2.out" }, 0.46);
+          tl.fromTo("#s5-p1, #s5-p2", { fillOpacity: 0 }, { fillOpacity: 1, duration: 0.24, ease: "power2.out" }, 1.04);
+          tl.fromTo("#s5-p3, #s5-p5", { fillOpacity: 0 }, { fillOpacity: 1, duration: 0.24, ease: "power2.out" }, 1.1);
+
+          // ── specular glint sweeps the finished mark ──────────────────────
+          var grad = document.getElementById("s5-glint-grad");
+          var sweep = proxy(function (x) {
+            grad.setAttribute("gradientTransform", "translate(" + x.toFixed(2) + " 0)");
+          });
+          tl.set(["#s5-glint", "#s5-glint-bloom"], { opacity: 1 }, 1.12);
+          tl.fromTo(sweep, { v: -260 }, { v: 1400, duration: 0.8, ease: "power2.inOut" }, 1.12);
+          tl.set(["#s5-glint", "#s5-glint-bloom"], { opacity: 0 }, 1.93);
+          sweep.v = -260;
+
+          // ── the horizon returns as the baseline ───────────────────────────
+          tl.fromTo("#s5-horizon", { scaleX: 0 }, { scaleX: 1, duration: 0.85, ease: "expo.out" }, 1.0);
+          tl.fromTo("#s5-horizon-glow", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power2.out" }, 1.05);
+          tl.fromTo("#s5-bloom", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.7, ease: "power2.out" }, 0.05);
+          tl.to("#s5-bloom", { opacity: 0.75, scale: 1.03, duration: 1.1, ease: "sine.inOut", yoyo: true, repeat: 2 }, 1.2);
+
+          // ── tagline wipes in while its tracking settles ──────────────────
+          var tag = document.getElementById("s5-tag-in");
+          var tagText = tag.textContent;
+          tag.textContent = "";
+          for (var ci = 0; ci < tagText.length; ci++) {
+            var cs = document.createElement("span");
+            cs.className = "ch";
+            cs.textContent = tagText.charAt(ci);
+            tag.appendChild(cs);
+          }
+          var tagChars = tag.querySelectorAll(".ch");
+          var tagMid = (tagChars.length - 1) / 2;
+          tl.set("#s5-tag", { opacity: 0 }, 0);
+          tl.set("#s5-tag-in", { clipPath: "inset(0% 100% 0% 0%)" }, 0);
+          tl.fromTo("#s5-tag", { opacity: 1 }, { opacity: 1, duration: 0.8, ease: "none", immediateRender: false }, 1.6);
+          tl.fromTo(
+            "#s5-tag-in",
+            { clipPath: "inset(0% 100% 0% 0%)" },
+            { clipPath: "inset(0% 0% 0% 0%)", duration: 0.8, ease: "power3.out", immediateRender: false },
+            1.6,
+          );
+          // tracking settles 0.62em → 0.42em as per-glyph x (0.2em × 28px per step)
+          tl.fromTo(
+            tagChars,
+            {
+              x: function (i) {
+                return (i - tagMid) * 0.2 * 28;
+              },
+            },
+            { x: 0, duration: 0.8, ease: "power3.out", immediateRender: false },
+            1.6,
+          );
+
+          // ── sign-off: COMING SOON decodes; the ion dot pulses ────────────
+          var soon = document.getElementById("s5-soon-txt");
+          var FINAL = "COMING SOON";
+          var CH = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
+          tl.fromTo(
+            proxy(function (p) {
+              var n = FINAL.length;
+              var res = Math.floor(p * n);
+              var step = Math.floor(p * 36);
+              var out = "";
+              for (var i = 0; i < n; i++) {
+                var c = FINAL.charAt(i);
+                if (i < res || c === " ") out += c;
+                else if (i < res + 3 && p > 0) out += CH.charAt(Math.floor(hash01(900 + i, step) * CH.length));
+                else out += " ";
+              }
+              soon.textContent = out;
+            }),
+            { v: 0 },
+            { v: 1, duration: 0.42, ease: "none" },
+            3.2,
+          );
+          tl.fromTo("#s5-soon", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 3.15);
+          tl.fromTo("#s5-dot", { scale: 1, opacity: 1 }, { scale: 1.7, opacity: 0.5, duration: 0.28, ease: "power2.out", yoyo: true, repeat: 1 }, 3.3);
+          tl.to("#s5-dot", { scale: 1.7, opacity: 0.5, duration: 0.28, ease: "power2.out", yoyo: true, repeat: 1 }, 3.9);
+
+          // ── the ring winks once before the fade ──────────────────────────
+          tl.fromTo(
+            "#s5-oglint",
+            { rotation: -60, svgOrigin: "772.73 100" },
+            { rotation: 300, svgOrigin: "772.73 100", duration: 0.55, ease: "power2.inOut", immediateRender: false },
+            4.18,
+          );
+          tl.fromTo("#s5-oglint", { opacity: 0 }, { opacity: 0.9, duration: 0.14, ease: "power1.out", immediateRender: false }, 4.18);
+          tl.to("#s5-oglint", { opacity: 0, duration: 0.2, ease: "power2.in" }, 4.55);
+
+          // ── the whole lockup breathes forward, then fades to void ────────
+          tl.fromTo("#s5-all", { scale: 1 }, { scale: 1.035, duration: 5, ease: "sine.out" }, 0);
+          tl.to("#s5-all", { opacity: 0, duration: 0.6, ease: "power2.in" }, 4.4);
+
+          window.__timelines["s5-lockup"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

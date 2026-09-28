@@ -1,0 +1,9 @@
+# HyperFrames working output
+snapshots/
+.hyperframes/anim-map/
+renders/*
+!renders/avzon-showreel.mp4
+!renders/avzon-showreel-poster.jpg
+!renders/avzon-showreel-contact-sheet.jpg
+node_modules/
+__pycache__/

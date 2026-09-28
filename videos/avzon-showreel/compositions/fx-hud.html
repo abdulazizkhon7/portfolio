@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · FX Instrument HUD</title>
+  </head>
+  <body>
+    <template id="fx-hud-template">
+      <style>
+        @font-face {
+          font-family: "AVZ Mono";
+          src: url("assets/fonts/geist-mono-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          font-family: "AVZ Mono", monospace;
+          text-transform: uppercase;
+          font-variant-numeric: tabular-nums;
+        }
+        #hud-wrap {
+          position: absolute;
+          inset: 0;
+        }
+        #hud-brackets {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+          overflow: visible;
+        }
+        #hud-brackets path {
+          fill: none;
+          stroke: #f2f0eb;
+          stroke-opacity: 0.62;
+          stroke-width: 2;
+          stroke-linecap: square;
+        }
+        .hud-block {
+          position: absolute;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          white-space: pre;
+        }
+        .hud-tl {
+          left: 112px;
+          top: 96px;
+        }
+        .hud-tr {
+          right: 112px;
+          top: 96px;
+          align-items: flex-end;
+          text-align: right;
+        }
+        .hud-bl {
+          left: 112px;
+          bottom: 96px;
+        }
+        .hud-br {
+          right: 112px;
+          bottom: 96px;
+          align-items: flex-end;
+          text-align: right;
+        }
+        .hud-l1 {
+          font-size: 20px;
+          font-weight: 500;
+          letter-spacing: 0.16em;
+          color: #f2f0eb;
+          line-height: 1;
+        }
+        .hud-l2 {
+          font-size: 18px;
+          font-weight: 400;
+          letter-spacing: 0.14em;
+          color: #8b919d;
+          line-height: 1;
+        }
+        .hud-ion {
+          color: #9aa6ff;
+        }
+        .hud-rail {
+          position: relative;
+          width: 300px;
+          height: 2px;
+          margin-top: 6px;
+          background: #2e3440;
+          overflow: hidden;
+        }
+        .hud-fill {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 300px;
+          height: 2px;
+          background: #4b5fff;
+          transform-origin: 0 50%;
+        }
+      </style>
+
+      <div id="root" data-composition-id="fx-hud" data-width="1920" data-height="1080" data-duration="10">
+        <div id="hud-wrap">
+        <svg id="hud-brackets" viewBox="0 0 1920 1080" aria-hidden="true">
+          <path id="hud-c1" d="M 72 112 L 72 72 L 112 72" />
+          <path id="hud-c2" d="M 1808 72 L 1848 72 L 1848 112" />
+          <path id="hud-c3" d="M 72 968 L 72 1008 L 112 1008" />
+          <path id="hud-c4" d="M 1848 968 L 1848 1008 L 1808 1008" />
+        </svg>
+        <div class="hud-block hud-tl">
+          <div class="hud-l1" id="hud-brand">AVZON</div>
+          <div class="hud-l2" id="hud-proj">TEASER · 001</div>
+        </div>
+        <div class="hud-block hud-tr">
+          <div class="hud-l1" id="hud-seq">01 — SIGNAL</div>
+          <div class="hud-l2" id="hud-seqn">SEQ 01 / 04</div>
+        </div>
+        <div class="hud-block hud-bl">
+          <div class="hud-l2" id="hud-fmt">1920 × 1080 · 60P</div>
+          <div class="hud-l1" id="hud-tc">TC 00:00:00:00</div>
+        </div>
+        <div class="hud-block hud-br">
+          <div class="hud-l2" id="hud-rev">REVEAL IN</div>
+          <div class="hud-l1 hud-ion" id="hud-count">T–10.00</div>
+          <div class="hud-rail"><div class="hud-fill" id="hud-fill"></div></div>
+        </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Instrument HUD (0–10 s): corner brackets, decoding labels, a 60p
+          // timecode, and a countdown to the reveal. Every string is a pure
+          // function of t (stateless hash for the rolling glyphs).
+          var tl = gsap.timeline({ paused: true });
+          var REVEAL_AT = 10;
+
+          function hash01(a, b) {
+            var h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+            h ^= h >>> 16;
+            h = Math.imul(h, 0x7feb352d);
+            h ^= h >>> 15;
+            return (h >>> 0) / 4294967296;
+          }
+          function driver(fn) {
+            var d = { _v: 0 };
+            Object.defineProperty(d, "v", {
+              get: function () {
+                return this._v;
+              },
+              set: function (x) {
+                this._v = x;
+                fn(x);
+              },
+            });
+            return d;
+          }
+          function clamp01(v) {
+            return v < 0 ? 0 : v > 1 ? 1 : v;
+          }
+          function pad(n, w) {
+            var s = String(n);
+            while (s.length < w) s = "0" + s;
+            return s;
+          }
+          var CHARSET = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789/·—";
+          function decode(finalText, pr, seed, step) {
+            var n = finalText.length;
+            var resolved = Math.floor(pr * n);
+            var out = "";
+            for (var i = 0; i < n; i++) {
+              var ch = finalText.charAt(i);
+              if (i < resolved || ch === " ") out += ch;
+              else if (i < resolved + 3 && pr > 0) {
+                out += CHARSET.charAt(Math.floor(hash01(seed * 131 + i, step) * CHARSET.length));
+              } else out += " ";
+            }
+            return out;
+          }
+          var el = {
+            brand: document.getElementById("hud-brand"),
+            proj: document.getElementById("hud-proj"),
+            seq: document.getElementById("hud-seq"),
+            seqn: document.getElementById("hud-seqn"),
+            fmt: document.getElementById("hud-fmt"),
+            tc: document.getElementById("hud-tc"),
+            rev: document.getElementById("hud-rev"),
+            count: document.getElementById("hud-count"),
+          };
+          var SEQ = [
+            [0, "01 — SIGNAL", "SEQ 01 / 04"],
+            [2.5, "02 — OBJECT", "SEQ 02 / 04"],
+            [5.5, "03 — VELOCITY", "SEQ 03 / 04"],
+            [8.5, "04 — CONVERGENCE", "SEQ 04 / 04"],
+          ];
+          function setText(node, s) {
+            if (node.textContent !== s) node.textContent = s;
+          }
+          function drawHud(t) {
+            var step = Math.floor(t * 30 + 1e-6);
+            setText(el.brand, decode("AVZON", clamp01((t - 0.42) / 0.3), 1, step));
+            setText(el.proj, decode("TEASER · 001", clamp01((t - 0.55) / 0.4), 2, step));
+            setText(el.fmt, decode("1920 × 1080 · 60P", clamp01((t - 0.62) / 0.45), 5, step));
+            setText(el.rev, decode("REVEAL IN", clamp01((t - 0.7) / 0.35), 7, step));
+            var s = 0;
+            for (var i = 0; i < SEQ.length; i++) if (t >= SEQ[i][0]) s = i;
+            var since = t - SEQ[s][0] - (s === 0 ? 0.48 : 0.12);
+            setText(el.seq, decode(SEQ[s][1], clamp01(since / 0.4), 3 + s * 7, step));
+            setText(el.seqn, decode(SEQ[s][2], clamp01((since - 0.08) / 0.4), 4 + s * 7, step));
+            var fr = Math.floor(t * 60 + 1e-6);
+            var tcText = "TC 00:00:" + pad(Math.floor(fr / 60), 2) + ":" + pad(fr % 60, 2);
+            setText(el.tc, t < 0.66 ? decode(tcText, clamp01((t - 0.36) / 0.3), 6, step) : tcText);
+            var cs = Math.floor(Math.max(0, REVEAL_AT - t) * 100 + 1e-6);
+            var cText = "T–" + pad(Math.floor(cs / 100), 2) + "." + pad(cs % 100, 2);
+            setText(el.count, t < 0.95 ? decode(cText, clamp01((t - 0.75) / 0.2), 8, step) : cText);
+          }
+          tl.fromTo(driver(drawHud), { v: 0 }, { v: 10, duration: 10, ease: "none" }, 0);
+          drawHud(0);
+
+          // corner brackets draw on (attribute-driven dashoffset: seek-safe)
+          ["#hud-c1", "#hud-c2", "#hud-c3", "#hud-c4"].forEach(function (sel, i) {
+            var path = document.querySelector(sel);
+            var len = path.getTotalLength();
+            path.setAttribute("stroke-dasharray", len + " " + len);
+            tl.fromTo(
+              path,
+              { attr: { "stroke-dashoffset": len } },
+              { attr: { "stroke-dashoffset": 0 }, duration: 0.42, ease: "power2.out" },
+              0.22 + i * 0.07,
+            );
+          });
+          tl.fromTo(
+            ".hud-block",
+            { opacity: 0, y: 6 },
+            { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.06 },
+            0.36,
+          );
+          tl.fromTo("#hud-fill", { scaleX: 0 }, { scaleX: 1, duration: REVEAL_AT, ease: "none" }, 0);
+          // the instrument layer steps aside for each flash, then for the impact
+          tl.to("#hud-wrap", { opacity: 0.15, duration: 0.12, ease: "power2.in" }, 2.36);
+          tl.to("#hud-wrap", { opacity: 1, duration: 0.3, ease: "power2.out" }, 2.62);
+          tl.to("#hud-wrap", { opacity: 0, duration: 0.16, ease: "power2.in" }, 9.78);
+
+          window.__timelines["fx-hud"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

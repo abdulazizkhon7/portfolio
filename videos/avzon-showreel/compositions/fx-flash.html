@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · FX Light Rig</title>
+  </head>
+  <body>
+    <template id="fx-flash-template">
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+        #fl-rig .fl {
+          position: absolute;
+          opacity: 0;
+          will-change: opacity, transform;
+        }
+        #flash-wash {
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+          background: #f7f6f2;
+        }
+        #flash-core {
+          left: -540px;
+          top: -900px;
+          width: 3000px;
+          height: 3000px;
+          background: radial-gradient(
+            circle at 50% 50%,
+            rgba(255, 255, 255, 1) 0%,
+            rgba(247, 246, 242, 0.96) 9%,
+            rgba(154, 166, 255, 0.5) 22%,
+            rgba(75, 95, 255, 0.16) 36%,
+            rgba(75, 95, 255, 0) 52%
+          );
+        }
+      </style>
+
+      <div id="root" data-composition-id="fx-flash" data-width="1920" data-height="1080" data-duration="15">
+        <div id="fl-rig">
+          <div id="flash-core" class="fl" data-layout-ignore></div>
+          <div id="flash-wash" class="fl" data-layout-ignore></div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Light rig: the two motivated flashes of the film ──────────────
+          // T1 2.50 — the sun overexposes the lens (anamorphic, off the sun)
+          // T4 10.00 — the impact (centered, near-instant attack)
+          // #flash-core's box is centered at (960, 600).
+          var tl = gsap.timeline({ paused: true });
+
+          var T1 = 2.5;
+          tl.fromTo(
+            "#flash-core",
+            { x: 0, y: 776 - 600, opacity: 0, scaleX: 0.5, scaleY: 0.22 },
+            { x: 0, y: 776 - 600, opacity: 1, scaleX: 1.3, scaleY: 0.7, duration: 0.18, ease: "power3.in" },
+            T1 - 0.18,
+          );
+          tl.fromTo(
+            "#flash-wash",
+            { opacity: 0 },
+            { opacity: 0.94, duration: 0.14, ease: "power3.in" },
+            T1 - 0.14,
+          );
+          tl.to("#flash-wash", { opacity: 0, duration: 0.36, ease: "power2.out" }, T1);
+          tl.to("#flash-core", { opacity: 0, scaleX: 2.1, scaleY: 1.1, duration: 0.5, ease: "power2.out" }, T1);
+
+          var T4 = 10;
+          tl.fromTo(
+            "#flash-core",
+            { x: 0, y: 540 - 600, opacity: 0, scaleX: 0.4, scaleY: 0.4 },
+            { x: 0, y: 540 - 600, opacity: 1, scaleX: 1.1, scaleY: 1.1, duration: 0.05, ease: "power4.in", immediateRender: false },
+            T4 - 0.05,
+          );
+          tl.fromTo(
+            "#flash-wash",
+            { opacity: 0 },
+            { opacity: 1, duration: 0.04, ease: "power4.in", immediateRender: false },
+            T4 - 0.04,
+          );
+          tl.to("#flash-wash", { opacity: 0, duration: 0.38, ease: "power3.out" }, T4 + 0.02);
+          tl.to("#flash-core", { opacity: 0, scaleX: 1.7, scaleY: 1.7, duration: 0.55, ease: "power2.out" }, T4 + 0.02);
+
+          window.__timelines["fx-flash"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

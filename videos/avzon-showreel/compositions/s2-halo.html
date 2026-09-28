@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · S2 Halo</title>
+  </head>
+  <body>
+    <template id="s2-halo-template">
+      <style>
+        @font-face {
+          font-family: "AVZ Archivo";
+          src: url("assets/fonts/archivo-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-stretch: 62% 125%;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "AVZ Mono";
+          src: url("assets/fonts/geist-mono-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: #050608;
+        }
+        #s2-glow {
+          position: absolute;
+          left: 160px;
+          top: 110px;
+          width: 1600px;
+          height: 900px;
+          background: radial-gradient(
+            ellipse 50% 50% at 50% 50%,
+            rgba(75, 95, 255, 0.34) 0%,
+            rgba(75, 95, 255, 0.16) 30%,
+            rgba(75, 95, 255, 0.05) 58%,
+            rgba(75, 95, 255, 0) 78%
+          );
+          will-change: transform, opacity;
+        }
+        #s2-cam {
+          position: absolute;
+          inset: 0;
+          transform-origin: 960px 560px;
+          will-change: transform;
+        }
+        #s2-ghost {
+          position: absolute;
+          left: 0;
+          top: 468px;
+          width: 1920px;
+          height: 184px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: "AVZ Archivo", sans-serif;
+          font-stretch: 125%;
+          font-weight: 150;
+          font-size: 226px;
+          line-height: 1;
+          letter-spacing: 0.02em;
+          color: #f2f0eb;
+          white-space: nowrap;
+          text-transform: uppercase;
+        }
+        #s2-ghost .ch {
+          display: inline-block;
+          will-change: transform;
+        }
+        #s2-canvas {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+        }
+        .s2-label {
+          position: absolute;
+          font-family: "AVZ Mono", monospace;
+          text-transform: uppercase;
+          font-variant-numeric: tabular-nums;
+          white-space: pre;
+          line-height: 1;
+        }
+        #s2-dia {
+          left: 760px;
+          top: 206px;
+          width: 400px;
+          text-align: center;
+          font-size: 22px;
+          font-weight: 500;
+          letter-spacing: 0.18em;
+          color: #f2f0eb;
+        }
+        #s2-deg {
+          left: 1452px;
+          top: 404px;
+          font-size: 20px;
+          font-weight: 500;
+          letter-spacing: 0.14em;
+          color: #9aa6ff;
+        }
+        #s2-read {
+          left: 300px;
+          top: 812px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          font-size: 19px;
+          letter-spacing: 0.14em;
+        }
+        #s2-read .k {
+          color: #8b919d;
+        }
+        #s2-read .v {
+          color: #f2f0eb;
+        }
+        #s2-vig {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(
+            ellipse 78% 74% at 50% 50%,
+            rgba(5, 6, 8, 0) 55%,
+            rgba(5, 6, 8, 0.34) 82%,
+            rgba(5, 6, 8, 0.7) 100%
+          );
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="s2-halo"
+        data-width="1920"
+        data-height="1080"
+        data-duration="3"
+      >
+        <div id="s2-glow"></div>
+        <div id="s2-cam" data-layout-allow-overflow>
+          <div id="s2-ghost" aria-hidden="true" data-layout-ignore>PRECISION</div>
+          <canvas id="s2-canvas" width="1920" height="1080"></canvas>
+          <div id="s2-vig" data-layout-ignore></div>
+          <div id="s2-dia" class="s2-label">Ø 1.000</div>
+          <div id="s2-deg" class="s2-label">360°</div>
+          <div id="s2-read" class="s2-label">
+            <div><span class="k">ROT  </span><span class="v" id="s2-rot">000.0°</span></div>
+            <div><span class="k">TILT </span><span class="v" id="s2-tilt">67.0°</span></div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Scene 2 · HALO ────────────────────────────────────────────────
+          // A precision-machined ring, projected in real 3D (tilt, roll, spin,
+          // perspective) and lit by a fixed key light. The brushed-face lobes are
+          // placed where the concentric grooves' tangent is perpendicular to the
+          // light half-vector, the physical origin of a turned-metal "bow tie".
+          var DUR = 3;
+          var W = 1920;
+          var H = 1080;
+          var TAU = Math.PI * 2;
+          var DEG = Math.PI / 180;
+          var CX = 960;
+          var CY = 560;
+          var R_OUT = 420;
+          var R_IN = 338;
+          var HALF_T = 30; // half wall height
+          var F = 2400; // focal length (px)
+
+          var clamp01 = function (v) {
+            return v < 0 ? 0 : v > 1 ? 1 : v;
+          };
+          var prog = function (t, a, b) {
+            return clamp01((t - a) / (b - a));
+          };
+          var sineIO = gsap.parseEase("sine.inOut");
+          var p2Out = gsap.parseEase("power2.out");
+          var p3Out = gsap.parseEase("power3.out");
+          var p2IO = gsap.parseEase("power2.inOut");
+          function hash01(a, b) {
+            var h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+            h ^= h >>> 16;
+            h = Math.imul(h, 0x7feb352d);
+            h ^= h >>> 15;
+            return (h >>> 0) / 4294967296;
+          }
+          function rgb(r, g, b, a) {
+            return "rgba(" + (r | 0) + "," + (g | 0) + "," + (b | 0) + "," + clamp01(a).toFixed(4) + ")";
+          }
+          function norm(v) {
+            var l = Math.hypot(v[0], v[1], v[2]);
+            return [v[0] / l, v[1] / l, v[2] / l];
+          }
+
+          // Camera-space light: upper-left, slightly in front. View = +z.
+          var L = norm([-0.5, -0.78, 0.42]);
+          var HV = norm([L[0], L[1], L[2] + 1]);
+
+          // Scene state as closed-form functions of t.
+          function tiltAt(t) {
+            return (67 - 9 * sineIO(prog(t, 0, DUR))) * DEG;
+          }
+          function rollAt(t) {
+            return (-5 + 6.5 * sineIO(prog(t, 0, DUR))) * DEG;
+          }
+          function spinAt(t) {
+            // steady turn, spinning up as the camera dives into the bore
+            var dive = Math.max(0, t - 2.55);
+            return (13.5 * t + 260 * dive * dive) * DEG;
+          }
+
+          var canvas = document.getElementById("s2-canvas");
+          var ctx = canvas.getContext("2d");
+          var rotEl = document.getElementById("s2-rot");
+          var tiltEl = document.getElementById("s2-tilt");
+
+          function draw(t) {
+            var a = tiltAt(t);
+            var ro = rollAt(t);
+            var sp = spinAt(t);
+            var ca = Math.cos(a);
+            var sa = Math.sin(a);
+            var cr = Math.cos(ro);
+            var sr = Math.sin(ro);
+            var expo = 0.28 + 0.72 * p2Out(prog(t, 0, 0.75)); // exposure rising out of the flash
+
+            // ring space → screen
+            function P(x, y, z) {
+              var y1 = y * ca - z * sa;
+              var z1 = y * sa + z * ca;
+              var x2 = x * cr - y1 * sr;
+              var y2 = x * sr + y1 * cr;
+              var s = F / (F - z1);
+              return [CX + x2 * s, CY + y2 * s, z1];
+            }
+            // ring-space direction → camera space (rotation only)
+            function N(x, y, z) {
+              var y1 = y * ca - z * sa;
+              var z1 = y * sa + z * ca;
+              return [x * cr - y1 * sr, x * sr + y1 * cr, z1];
+            }
+            function ringPt(r, th, z) {
+              return P(r * Math.cos(th), r * Math.sin(th), z);
+            }
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, W, H);
+            ctx.lineJoin = "round";
+
+            var SEG = 180;
+            var k;
+            var th0;
+            var th1;
+            var p0;
+            var p1;
+            var p2;
+            var p3;
+
+            // 1 · inner wall, far half (seen through the bore; faces the camera)
+            for (k = 0; k < SEG / 2; k++) {
+              th0 = Math.PI + (k / (SEG / 2)) * Math.PI;
+              th1 = Math.PI + ((k + 1) / (SEG / 2)) * Math.PI;
+              p0 = ringPt(R_IN, th0, HALF_T);
+              p1 = ringPt(R_IN, th1, HALF_T);
+              p2 = ringPt(R_IN, th1, -HALF_T);
+              p3 = ringPt(R_IN, th0, -HALF_T);
+              var nIn = N(-Math.cos(th0), -Math.sin(th0), 0);
+              var lam = Math.max(0, nIn[0] * L[0] + nIn[1] * L[1] + nIn[2] * L[2]);
+              var top = -Math.sin(th0); // 1 at the far center
+              var cI = 10 + 38 * lam * expo;
+              ctx.fillStyle = rgb(cI, cI + 1, cI + 6, 1);
+              ctx.beginPath();
+              ctx.moveTo(p0[0], p0[1]);
+              ctx.lineTo(p1[0], p1[1]);
+              ctx.lineTo(p2[0], p2[1]);
+              ctx.lineTo(p3[0], p3[1]);
+              ctx.closePath();
+              ctx.fill();
+              // ion backlight bleeding over the lower lip of the far wall
+              ctx.strokeStyle = rgb(75, 95, 255, 0.22 * top * expo);
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(p3[0], p3[1]);
+              ctx.lineTo(p2[0], p2[1]);
+              ctx.stroke();
+            }
+
+            // 2 · top face: brushed metal via a conic gradient whose lobes sit
+            // where the groove tangent ⟂ the half-vector (computed in ring space)
+            var hy1 = HV[0] * -sr + HV[1] * cr; // undo roll
+            var hx1 = HV[0] * cr + HV[1] * sr;
+            var hyR = hy1 * ca + HV[2] * sa; // undo tilt
+            var thH = Math.atan2(hyR, hx1);
+            var cen = P(0, 0, HALF_T);
+            var lobeA = ringPt((R_IN + R_OUT) / 2, thH, HALF_T);
+            var lobeB = ringPt((R_IN + R_OUT) / 2, thH + Math.PI, HALF_T);
+            var psiA = Math.atan2(lobeA[1] - cen[1], lobeA[0] - cen[0]);
+            var psiB = Math.atan2(lobeB[1] - cen[1], lobeB[0] - cen[0]);
+            // orbiting specular sweep (one pass, 4.00 → 4.85 global)
+            var swP = prog(t, 1.5, 2.38);
+            var swAmt = Math.sin(Math.PI * swP);
+            var thS = (205 + 390 * p2IO(swP)) * DEG;
+            var sweepPt = ringPt(R_OUT - 20, thS, HALF_T);
+            var psiS = Math.atan2(sweepPt[1] - cen[1], sweepPt[0] - cen[0]);
+            function angDist(x, y) {
+              var d = Math.abs(x - y) % TAU;
+              return d > Math.PI ? TAU - d : d;
+            }
+            var cg = ctx.createConicGradient(0, cen[0], cen[1]);
+            var STOPS = 96;
+            for (k = 0; k <= STOPS; k++) {
+              var psi = (k / STOPS) * TAU;
+              var dA = angDist(psi, (psiA + TAU) % TAU);
+              var dB = angDist(psi, (psiB + TAU) % TAU);
+              var dS = angDist(psi, (psiS + TAU) % TAU);
+              var lob =
+                0.92 * Math.exp(-(dA * dA) / 0.05) +
+                0.44 * Math.exp(-(dB * dB) / 0.07) +
+                0.16 * Math.exp(-(dA * dA) / 0.6) +
+                0.9 * swAmt * Math.exp(-(dS * dS) / 0.02);
+              lob *= expo;
+              // far half of the face mirrors a little of the ion backlight
+              var far = Math.max(0, -Math.sin(psi));
+              var r = 25 + 150 * lob + 10 * far;
+              var g = 27 + 154 * lob + 13 * far;
+              var b = 33 + 162 * lob + 40 * far;
+              cg.addColorStop(k / STOPS, rgb(r, g, b, 1));
+            }
+            ctx.beginPath();
+            for (k = 0; k <= SEG; k++) {
+              p0 = ringPt(R_OUT, (k / SEG) * TAU, HALF_T);
+              if (k === 0) ctx.moveTo(p0[0], p0[1]);
+              else ctx.lineTo(p0[0], p0[1]);
+            }
+            ctx.closePath();
+            for (k = SEG; k >= 0; k--) {
+              p0 = ringPt(R_IN, (k / SEG) * TAU, HALF_T);
+              if (k === SEG) ctx.moveTo(p0[0], p0[1]);
+              else ctx.lineTo(p0[0], p0[1]);
+            }
+            ctx.closePath();
+            ctx.fillStyle = cg;
+            ctx.fill("evenodd");
+
+            // 3 · engraved groove + graduation ticks (they travel with the spin)
+            function ellipse(r, z) {
+              ctx.beginPath();
+              for (var q = 0; q <= SEG; q++) {
+                var pp = ringPt(r, (q / SEG) * TAU, z);
+                if (q === 0) ctx.moveTo(pp[0], pp[1]);
+                else ctx.lineTo(pp[0], pp[1]);
+              }
+              ctx.closePath();
+            }
+            ellipse(R_IN + 22, HALF_T);
+            ctx.strokeStyle = rgb(4, 5, 7, 0.85);
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+            ellipse(R_IN + 23.6, HALF_T);
+            ctx.strokeStyle = rgb(242, 240, 235, 0.13 * expo);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            var TICKS = 120;
+            for (k = 0; k < TICKS; k++) {
+              var th = sp + (k / TICKS) * TAU;
+              var len = k % 10 === 0 ? 30 : k % 5 === 0 ? 20 : 12;
+              var ta = ringPt(R_OUT - 10, th, HALF_T);
+              var tb = ringPt(R_OUT - 10 - len, th, HALF_T);
+              var tp = Math.atan2(ta[1] - cen[1], ta[0] - cen[0]);
+              var dd = Math.min(angDist(tp, psiA), angDist(tp, psiB));
+              var lit = 0.3 + 0.7 * Math.exp(-(dd * dd) / 0.3);
+              ctx.strokeStyle = rgb(242, 240, 235, (k % 10 === 0 ? 0.85 : 0.5) * lit * expo);
+              ctx.lineWidth = k % 10 === 0 ? 2 : 1.4;
+              ctx.beginPath();
+              ctx.moveTo(ta[0], ta[1]);
+              ctx.lineTo(tb[0], tb[1]);
+              ctx.stroke();
+            }
+
+            // 4 · outer wall, near half: lambert + specular strips, knurled
+            for (k = 0; k < SEG / 2; k++) {
+              th0 = (k / (SEG / 2)) * Math.PI;
+              th1 = ((k + 1) / (SEG / 2)) * Math.PI;
+              p0 = ringPt(R_OUT, th0, HALF_T);
+              p1 = ringPt(R_OUT, th1, HALF_T);
+              p2 = ringPt(R_OUT, th1, -HALF_T);
+              p3 = ringPt(R_OUT, th0, -HALF_T);
+              var thm = (th0 + th1) / 2;
+              var nW = N(Math.cos(thm), Math.sin(thm), 0);
+              var lw = Math.max(0, nW[0] * L[0] + nW[1] * L[1] + nW[2] * L[2]);
+              var sw = Math.pow(Math.max(0, nW[0] * HV[0] + nW[1] * HV[1] + nW[2] * HV[2]), 26);
+              var c = (12 + 40 * lw + 150 * sw) * expo + 6;
+              ctx.fillStyle = rgb(c, c + 1, c + 5, 1);
+              ctx.beginPath();
+              ctx.moveTo(p0[0], p0[1]);
+              ctx.lineTo(p1[0], p1[1]);
+              ctx.lineTo(p2[0], p2[1]);
+              ctx.lineTo(p3[0], p3[1]);
+              ctx.closePath();
+              ctx.fill();
+            }
+            var KN = 260;
+            for (k = 0; k < KN; k++) {
+              var thk = sp * 1 + (k / KN) * TAU;
+              var s0 = Math.sin(thk);
+              if (s0 < 0.06) continue;
+              var ka = ringPt(R_OUT, thk, HALF_T - 3);
+              var kb = ringPt(R_OUT, thk, -HALF_T + 3);
+              ctx.strokeStyle = k % 2 ? rgb(0, 0, 0, 0.35 * s0) : rgb(242, 240, 235, 0.07 * s0 * expo);
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(ka[0], ka[1]);
+              ctx.lineTo(kb[0], kb[1]);
+              ctx.stroke();
+            }
+
+            // 5 · chamfer glints on the top edges (brightest facing the light)
+            function chamfer(r, sign, amt) {
+              for (var q = 0; q < SEG; q++) {
+                var ta0 = (q / SEG) * TAU;
+                var ta1 = ((q + 1) / SEG) * TAU;
+                var tm = (ta0 + ta1) / 2;
+                var nC = N(sign * Math.cos(tm) * 0.7, sign * Math.sin(tm) * 0.7, 0.7);
+                var sc = Math.pow(Math.max(0, nC[0] * HV[0] + nC[1] * HV[1] + nC[2] * HV[2]), 18);
+                var lc = Math.max(0, nC[0] * L[0] + nC[1] * L[1] + nC[2] * L[2]);
+                var dS2 = angDist(tm, thS);
+                var al = (0.1 + 0.35 * lc + 0.9 * sc + 1.2 * swAmt * Math.exp(-(dS2 * dS2) / 0.03)) * amt * expo;
+                if (al < 0.02) continue;
+                var e0 = ringPt(r, ta0, HALF_T);
+                var e1 = ringPt(r, ta1, HALF_T);
+                ctx.strokeStyle = rgb(242, 240, 235, al);
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.moveTo(e0[0], e0[1]);
+                ctx.lineTo(e1[0], e1[1]);
+                ctx.stroke();
+              }
+            }
+            chamfer(R_OUT - 0.5, 1, 1);
+            chamfer(R_IN + 0.5, -1, 0.7);
+
+            // 6 · ion backlight rim on the far silhouette (the "halo")
+            var pulse = 1 + 0.6 * Math.exp(-Math.pow((t - 1.5) / 0.22, 2));
+            var rimLayers = [
+              [16, 0.07],
+              [6, 0.2],
+              [2.2, 0.62],
+            ];
+            for (var li = 0; li < rimLayers.length; li++) {
+              ctx.lineWidth = rimLayers[li][0];
+              for (k = 0; k < SEG / 2; k++) {
+                th0 = Math.PI + (k / (SEG / 2)) * Math.PI;
+                th1 = Math.PI + ((k + 1) / (SEG / 2)) * Math.PI;
+                var up = Math.pow(Math.max(0, -Math.sin((th0 + th1) / 2)), 1.6);
+                var ra = rimLayers[li][1] * up * pulse * (0.4 + 0.6 * expo);
+                if (ra < 0.01) continue;
+                p0 = ringPt(R_OUT + 1, th0, HALF_T);
+                p1 = ringPt(R_OUT + 1, th1, HALF_T);
+                ctx.strokeStyle = li === 2 ? rgb(154, 166, 255, ra) : rgb(75, 95, 255, ra);
+                ctx.beginPath();
+                ctx.moveTo(p0[0], p0[1]);
+                ctx.lineTo(p1[0], p1[1]);
+                ctx.stroke();
+              }
+            }
+            // specular sweep sprite riding the rim
+            if (swAmt > 0.01) {
+              var sg = ctx.createRadialGradient(sweepPt[0], sweepPt[1], 0, sweepPt[0], sweepPt[1], 90);
+              sg.addColorStop(0, rgb(255, 255, 255, 0.55 * swAmt));
+              sg.addColorStop(0.2, rgb(242, 240, 235, 0.2 * swAmt));
+              sg.addColorStop(1, rgb(154, 166, 255, 0));
+              ctx.globalCompositeOperation = "lighter";
+              ctx.fillStyle = sg;
+              ctx.fillRect(sweepPt[0] - 90, sweepPt[1] - 90, 180, 180);
+              ctx.globalCompositeOperation = "source-over";
+            }
+
+            // 7 · engineering overlay ─────────────────────────────────────────
+            var POR = function (al) {
+              return rgb(242, 240, 235, al);
+            };
+            // dashed construction ellipse in the face plane, drawing on
+            var ce = p2Out(prog(t, 0.4, 1.2));
+            if (ce > 0) {
+              ctx.setLineDash([12, 9]);
+              ctx.lineDashOffset = -t * 30;
+              ctx.strokeStyle = POR(0.42);
+              ctx.lineWidth = 1.4;
+              ctx.beginPath();
+              var n2 = Math.max(2, Math.round(SEG * ce));
+              for (k = 0; k <= n2; k++) {
+                p0 = ringPt(R_OUT * 1.13, -Math.PI / 2 + (k / SEG) * TAU, HALF_T);
+                if (k === 0) ctx.moveTo(p0[0], p0[1]);
+                else ctx.lineTo(p0[0], p0[1]);
+              }
+              ctx.stroke();
+              ctx.setLineDash([]);
+              // protractor ticks every 15°, fading in behind the draw head
+              for (k = 0; k < 24; k++) {
+                var tq = -Math.PI / 2 + (k / 24) * TAU;
+                if (k / 24 > ce) continue;
+                var q0 = ringPt(R_OUT * 1.13, tq, HALF_T);
+                var q1 = ringPt(R_OUT * (k % 6 === 0 ? 1.2 : 1.165), tq, HALF_T);
+                ctx.strokeStyle = POR(k % 6 === 0 ? 0.62 : 0.34);
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(q0[0], q0[1]);
+                ctx.lineTo(q1[0], q1[1]);
+                ctx.stroke();
+              }
+            }
+            // center lines (dash-dot drafting convention), extending outward
+            var cl = p3Out(prog(t, 0.5, 1.05));
+            if (cl > 0) {
+              ctx.setLineDash([26, 7, 4, 7]);
+              ctx.strokeStyle = POR(0.26);
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(CX - 640 * cl, CY);
+              ctx.lineTo(CX + 640 * cl, CY);
+              ctx.moveTo(CX, CY - 330 * cl);
+              ctx.lineTo(CX, CY + 330 * cl);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+            // Ø dimension: extension lines from the true silhouette extremes
+            var dm = p3Out(prog(t, 0.85, 1.3));
+            if (dm > 0) {
+              var eL = ringPt(R_OUT, Math.PI, 0);
+              var eR = ringPt(R_OUT, 0, 0);
+              var DY = 248;
+              ctx.strokeStyle = POR(0.5);
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(eL[0], eL[1] - 30);
+              ctx.lineTo(eL[0], eL[1] - 30 - (eL[1] - 30 - (DY - 14)) * dm);
+              ctx.moveTo(eR[0], eR[1] - 30);
+              ctx.lineTo(eR[0], eR[1] - 30 - (eR[1] - 30 - (DY - 14)) * dm);
+              ctx.stroke();
+              var dl = p2Out(prog(t, 1.0, 1.4));
+              var midX = (eL[0] + eR[0]) / 2;
+              ctx.strokeStyle = POR(0.8);
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(midX - (midX - eL[0]) * dl, DY);
+              ctx.lineTo(midX + (eR[0] - midX) * dl, DY);
+              ctx.stroke();
+              if (dl > 0.98) {
+                ctx.fillStyle = POR(0.9);
+                ctx.beginPath();
+                ctx.moveTo(eL[0], DY);
+                ctx.lineTo(eL[0] + 16, DY - 5);
+                ctx.lineTo(eL[0] + 16, DY + 5);
+                ctx.closePath();
+                ctx.moveTo(eR[0], DY);
+                ctx.lineTo(eR[0] - 16, DY - 5);
+                ctx.lineTo(eR[0] - 16, DY + 5);
+                ctx.closePath();
+                ctx.fill();
+              }
+            }
+            // 360° callout: a short arc with arrowheads outside the right flank
+            var ar = p2Out(prog(t, 1.2, 1.55));
+            if (ar > 0) {
+              ctx.strokeStyle = rgb(154, 166, 255, 0.85);
+              ctx.lineWidth = 1.6;
+              ctx.beginPath();
+              var aN = 24;
+              for (k = 0; k <= aN; k++) {
+                var tA = (-38 + 34 * ar * (k / aN)) * DEG;
+                p0 = ringPt(R_OUT * 1.25, tA, HALF_T);
+                if (k === 0) ctx.moveTo(p0[0], p0[1]);
+                else ctx.lineTo(p0[0], p0[1]);
+              }
+              ctx.stroke();
+            }
+
+            // live telemetry readouts
+            var rotDeg = (((sp / DEG) % 360) + 360) % 360;
+            rotEl.textContent = (rotDeg < 100 ? (rotDeg < 10 ? "00" : "0") : "") + rotDeg.toFixed(1) + "°";
+            tiltEl.textContent = (a / DEG).toFixed(1) + "°";
+          }
+
+          var tl = gsap.timeline({ paused: true });
+          var drv = { _t: 0 };
+          Object.defineProperty(drv, "t", {
+            get: function () {
+              return this._t;
+            },
+            set: function (v) {
+              this._t = v;
+              draw(v);
+            },
+          });
+          tl.fromTo(drv, { t: 0 }, { t: DUR, duration: DUR, ease: "none" }, 0);
+
+          // ghost title: tracking collapses from beyond the frame to a tight set.
+          // Tracking is linear in glyph index, so each glyph's x offset is
+          // (i − center) × Δtracking: transforms stay sub-pixel smooth where a
+          // letter-spacing tween would snap to whole pixels.
+          var ghost = document.getElementById("s2-ghost");
+          var word = ghost.textContent;
+          ghost.textContent = "";
+          for (var gi = 0; gi < word.length; gi++) {
+            var sp = document.createElement("span");
+            sp.className = "ch";
+            sp.textContent = word.charAt(gi);
+            ghost.appendChild(sp);
+          }
+          var chars = ghost.querySelectorAll(".ch");
+          var mid = (chars.length - 1) / 2;
+          var dTrack = 0.4 * 226; // 0.42em → 0.02em at 226px
+          tl.fromTo(
+            chars,
+            {
+              x: function (i) {
+                return (i - mid) * dTrack;
+              },
+            },
+            { x: 0, duration: 1.3, ease: "power4.out" },
+            0.1,
+          );
+          tl.fromTo("#s2-ghost", { opacity: 0 }, { opacity: 0.17, duration: 1.3, ease: "power4.out" }, 0.1);
+          // backlight: breathes, then pulses with the orbiting sweep
+          tl.fromTo("#s2-glow", { opacity: 0.35, scale: 0.94 }, { opacity: 1, scale: 1, duration: 1.2, ease: "power2.out" }, 0);
+          tl.to("#s2-glow", { opacity: 0.8, scale: 1.02, duration: 0.3, ease: "sine.inOut" }, 1.2);
+          tl.to("#s2-glow", { opacity: 1.0, scale: 1.06, duration: 0.25, ease: "power2.out" }, 1.5);
+          tl.to("#s2-glow", { opacity: 0.85, scale: 1.03, duration: 0.9, ease: "sine.inOut" }, 1.75);
+          // slow push; the host takes over for the dive into the bore
+          tl.fromTo("#s2-cam", { scale: 1 }, { scale: 1.035, duration: 2.65, ease: "sine.inOut" }, 0);
+
+          // labels resolve like instrument readouts (deterministic decode)
+          var CHARSET = "0123456789ABCDEF.·";
+          function decoder(el, finalText, t0, dur, seed) {
+            var d = { _p: 0 };
+            Object.defineProperty(d, "p", {
+              get: function () {
+                return this._p;
+              },
+              set: function (pv) {
+                this._p = pv;
+                var n = finalText.length;
+                var res = Math.floor(pv * n);
+                var step = Math.floor(pv * 40);
+                var out = "";
+                for (var i = 0; i < n; i++) {
+                  var ch = finalText.charAt(i);
+                  if (i < res || ch === " ") out += ch;
+                  else if (i < res + 3 && pv > 0) out += CHARSET.charAt(Math.floor(hash01(seed + i, step) * CHARSET.length));
+                  else out += " ";
+                }
+                el.textContent = out;
+              },
+            });
+            tl.fromTo(d, { p: 0 }, { p: 1, duration: dur, ease: "none" }, t0);
+            d.p = 0;
+          }
+          decoder(document.getElementById("s2-dia"), "Ø 1.000", 1.05, 0.4, 101);
+          decoder(document.getElementById("s2-deg"), "360°", 1.35, 0.25, 202);
+          tl.fromTo("#s2-deg", { x: -10, opacity: 0 }, { x: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 1.3);
+          tl.fromTo("#s2-read", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 0.7);
+          tl.fromTo("#s2-dia", { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none" }, 1.05);
+
+          draw(0);
+          window.__timelines["s2-halo"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
