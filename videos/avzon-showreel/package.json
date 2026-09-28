@@ -1,0 +1,12 @@
+{
+  "name": "avzon-showreel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.8.81 preview",
+    "check": "npx --yes hyperframes@0.8.81 check --timeout 60000",
+    "render": "npx --yes hyperframes@0.8.81 render --fps 60 --quality delivery --output renders/avzon-showreel.mp4",
+    "publish": "npx --yes hyperframes@0.8.81 publish",
+    "score": "python3 tools/score.py \"${HF_SFX_DIR:-$HOME/.claude/skills/media-use/audio/assets/sfx}\" assets/audio/score.wav"
+  }
+}

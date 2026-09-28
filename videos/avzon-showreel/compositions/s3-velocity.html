@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · S3 Velocity</title>
+  </head>
+  <body>
+    <template id="s3-velocity-template">
+      <style>
+        @font-face {
+          font-family: "AVZ Archivo";
+          src: url("assets/fonts/archivo-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-stretch: 62% 125%;
+          font-display: block;
+        }
+        @font-face {
+          font-family: "AVZ Mono";
+          src: url("assets/fonts/geist-mono-var.woff2") format("woff2");
+          font-weight: 100 900;
+          font-display: block;
+        }
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: #050608;
+        }
+        #s3-tunnel {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+        }
+        .s3-word {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: "AVZ Archivo", sans-serif;
+          color: #f2f0eb;
+          text-transform: uppercase;
+          white-space: nowrap;
+          line-height: 1;
+          opacity: 0;
+          will-change: transform, filter, opacity;
+        }
+        .s3-word > span {
+          display: block;
+        }
+        #s3-w1 {
+          font-size: 330px;
+          font-weight: 900;
+          font-stretch: 125%;
+          letter-spacing: -0.03em;
+        }
+        #s3-w2 {
+          font-size: 232px;
+          font-weight: 900;
+          font-stretch: 118%;
+          letter-spacing: -0.03em;
+        }
+        #s3-w3 {
+          font-size: 286px;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+        }
+        #s3-w3 > span {
+          font-variation-settings: "wdth" 125, "wght" 900;
+        }
+        .s3-dot {
+          color: #4b5fff;
+        }
+        #s3-w3 .ch {
+          display: inline-block;
+          will-change: transform;
+        }
+        #s3-index {
+          position: absolute;
+          left: 0;
+          width: 1920px;
+          top: 808px;
+          text-align: center;
+          font-family: "AVZ Mono", monospace;
+          font-size: 20px;
+          font-weight: 500;
+          letter-spacing: 0.3em;
+          color: #9aa6ff;
+          font-variant-numeric: tabular-nums;
+          white-space: pre;
+          opacity: 0;
+        }
+        #s3-vig {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(
+            ellipse 78% 74% at 50% 50%,
+            rgba(5, 6, 8, 0) 55%,
+            rgba(5, 6, 8, 0.34) 82%,
+            rgba(5, 6, 8, 0.7) 100%
+          );
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="s3-velocity"
+        data-width="1920"
+        data-height="1080"
+        data-duration="3"
+      >
+        <canvas id="s3-tunnel" width="1920" height="1080" data-layout-allow-overflow></canvas>
+        <div id="s3-vig" data-layout-ignore></div>
+        <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+          <filter id="s3-streak" x="-60%" y="-50%" width="220%" height="200%">
+            <feGaussianBlur id="s3-streak-blur" in="SourceGraphic" stdDeviation="0 0" />
+          </filter>
+        </svg>
+        <div class="s3-word" id="s3-w1"><span>FORM<span class="s3-dot">.</span></span></div>
+        <div class="s3-word" id="s3-w2"><span id="s3-w2-in">FUNCTION<span class="s3-dot">.</span></span></div>
+        <div class="s3-word" id="s3-w3" data-layout-allow-overflow><span id="s3-w3-in"><span class="ch">F</span><span class="ch">U</span><span class="ch">T</span><span class="ch">U</span><span class="ch">R</span><span class="ch">E</span><span class="ch s3-dot">.</span></span></div>
+        <div id="s3-index">01 / 03</div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Scene 3 · VELOCITY ────────────────────────────────────────────
+          // Through the bore into a tunnel of engraved rings. Travel distance is
+          // a closed-form function of t (base acceleration + a decaying velocity
+          // kick on every word hit), so any frame renders identically alone.
+          var DUR = 3;
+          var W = 1920;
+          var H = 1080;
+          var TAU = Math.PI * 2;
+          var HITS = [0.5, 1.25, 2.0]; // global 6.00 · 6.75 · 7.50
+
+          var N = 30;
+          var D = 170; // ring spacing (world units)
+          var ZSPAN = N * D;
+          var Z_NEAR = 60;
+          var RW = 560; // ring radius (world)
+          var FOC = 760;
+
+          function clamp01(v) {
+            return v < 0 ? 0 : v > 1 ? 1 : v;
+          }
+          function smooth(a, b, x) {
+            var u = clamp01((x - a) / (b - a));
+            return u * u * (3 - 2 * u);
+          }
+          function rgb(r, g, b, a) {
+            return "rgba(" + r + "," + g + "," + b + "," + clamp01(a).toFixed(4) + ")";
+          }
+
+          function travel(t) {
+            var s = 1250 * t + 300 * t * t;
+            for (var i = 0; i < HITS.length; i++) {
+              var dt = t - HITS[i];
+              if (dt > 0) s += 330 * (1 - Math.exp(-dt / 0.2));
+            }
+            // FUTURE's final surge toward the camera
+            var surge = Math.max(0, t - 2.55);
+            s += 2600 * surge * surge;
+            return s;
+          }
+          function boostAt(t) {
+            var b = 0;
+            for (var i = 0; i < HITS.length; i++) {
+              var dt = t - HITS[i];
+              if (dt >= 0) b += Math.exp(-dt / 0.16);
+            }
+            return b;
+          }
+
+          var canvas = document.getElementById("s3-tunnel");
+          var ctx = canvas.getContext("2d");
+
+          function ringAt(z, t, vpx, vpy, roll, i, boost, trail) {
+            var r = (RW * FOC) / z;
+            if (r > 1500 || r < 2) return;
+            var far = 1 - smooth(ZSPAN * 0.42, ZSPAN, z);
+            var near = smooth(Z_NEAR, 520, z);
+            var a = far * near * (0.3 + 0.55 * boost) * trail;
+            if (a < 0.01) return;
+            var ion = i % 5 === 0;
+            var lw = Math.max(0.6, (4.2 * FOC) / z);
+            // base ring
+            ctx.lineWidth = lw;
+            ctx.strokeStyle = ion ? rgb(75, 95, 255, a * 1.3) : rgb(242, 240, 235, a * 0.5);
+            ctx.beginPath();
+            ctx.arc(vpx, vpy, r, 0, TAU);
+            ctx.stroke();
+            if (ion) {
+              ctx.lineWidth = lw * 5;
+              ctx.strokeStyle = rgb(75, 95, 255, a * 0.12);
+              ctx.beginPath();
+              ctx.arc(vpx, vpy, r, 0, TAU);
+              ctx.stroke();
+            }
+            // specular arc, upper-left (the key light)
+            ctx.lineWidth = lw * 1.5;
+            ctx.strokeStyle = rgb(255, 255, 255, a * 0.95);
+            ctx.beginPath();
+            ctx.arc(vpx, vpy, r, Math.PI * 1.08 + roll, Math.PI * 1.42 + roll);
+            ctx.stroke();
+            // engraved graduations on every third ring
+            if (i % 3 === 0 && trail === 1 && r > 40) {
+              var tl0 = (18 * FOC) / z;
+              ctx.lineWidth = Math.max(0.6, lw * 0.5);
+              ctx.strokeStyle = rgb(242, 240, 235, a * 0.42);
+              ctx.beginPath();
+              for (var k = 0; k < 72; k++) {
+                var th = roll * 1.6 + (k / 72) * TAU;
+                var len = k % 6 === 0 ? tl0 * 1.9 : tl0;
+                var c = Math.cos(th);
+                var s = Math.sin(th);
+                ctx.moveTo(vpx + c * r, vpy + s * r);
+                ctx.lineTo(vpx + c * (r - len), vpy + s * (r - len));
+              }
+              ctx.stroke();
+            }
+          }
+
+          function draw(t) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.fillStyle = "#050608";
+            ctx.fillRect(0, 0, W, H);
+
+            var vpx = 960 + 16 * Math.sin(1.3 * t) + 6 * Math.sin(3.1 * t + 1);
+            var vpy = 540 + 9 * Math.sin(0.9 * t + 1.2);
+            var roll = 0.35 * t;
+            var boost = boostAt(t);
+            var s = travel(t);
+            var v = (travel(t + 0.004) - travel(t - 0.004)) / 0.008; // units/s
+
+            // light at the end of the tunnel
+            var eg = ctx.createRadialGradient(vpx, vpy, 0, vpx, vpy, 520);
+            eg.addColorStop(0, rgb(154, 166, 255, 0.24 + 0.2 * boost));
+            eg.addColorStop(0.25, rgb(75, 95, 255, 0.1 + 0.08 * boost));
+            eg.addColorStop(1, rgb(75, 95, 255, 0));
+            ctx.fillStyle = eg;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.globalCompositeOperation = "lighter";
+            for (var i = 0; i < N; i++) {
+              var z = ((((i * D - s) % ZSPAN) + ZSPAN) % ZSPAN) + Z_NEAR;
+              // two trailing echoes (shutter smear), then the ring itself
+              ringAt(z + v / 60, t, vpx, vpy, roll, i, boost, 0.18);
+              ringAt(z + v / 120, t, vpx, vpy, roll, i, boost, 0.34);
+              ringAt(z, t, vpx, vpy, roll, i, boost, 1);
+            }
+            ctx.globalCompositeOperation = "source-over";
+
+            // horizontal speed hairlines flicking past on each hit
+            for (var h = 0; h < HITS.length; h++) {
+              var dt = t - HITS[h];
+              if (dt < 0 || dt > 0.3) continue;
+              for (var j = 0; j < 7; j++) {
+                var y = 180 + ((h * 7 + j) * 131) % 720;
+                var x = -600 + (dt / 0.3) * 3200 + (((j * 97) % 5) - 2) * 180;
+                var len2 = 380 + ((j * 53) % 4) * 120;
+                var al = 0.5 * (1 - dt / 0.3);
+                var hg = ctx.createLinearGradient(x - len2, 0, x, 0);
+                hg.addColorStop(0, rgb(242, 240, 235, 0));
+                hg.addColorStop(1, rgb(242, 240, 235, al));
+                ctx.fillStyle = hg;
+                ctx.fillRect(x - len2, y, len2, 1.5);
+              }
+            }
+          }
+
+          var tl = gsap.timeline({ paused: true });
+          var drv = { _t: 0 };
+          Object.defineProperty(drv, "t", {
+            get: function () {
+              return this._t;
+            },
+            set: function (v) {
+              this._t = v;
+              draw(v);
+              // rhythm chrome: the index steps on the same beat array
+              var n = v >= HITS[2] ? 3 : v >= HITS[1] ? 2 : 1;
+              var label = "0" + n + " / 03";
+              if (idx.textContent !== label) idx.textContent = label;
+            },
+          });
+          var idx = document.getElementById("s3-index");
+          tl.fromTo(drv, { t: 0 }, { t: DUR, duration: DUR, ease: "none" }, 0);
+
+          // ── FORM. — slams in depth (scale + blur), power4.out ─────────────
+          tl.set("#s3-w1", { opacity: 1 }, HITS[0]);
+          tl.fromTo(
+            "#s3-w1",
+            { scale: 1.55, filter: "blur(18px)" },
+            { scale: 1, filter: "blur(0px)", duration: 0.42, ease: "power4.out", immediateRender: false },
+            HITS[0],
+          );
+          tl.to("#s3-w1", { scale: 0.97, duration: 0.33, ease: "none" }, HITS[0] + 0.42);
+          tl.set("#s3-w1", { opacity: 0 }, HITS[1]);
+
+          // ── FUNCTION. — whips in laterally with a directional smear ──────
+          var blurNode = document.getElementById("s3-streak-blur");
+          var blurProxy = { _v: 0 };
+          Object.defineProperty(blurProxy, "v", {
+            get: function () {
+              return this._v;
+            },
+            set: function (x) {
+              this._v = x;
+              blurNode.setAttribute("stdDeviation", x.toFixed(2) + " 0");
+            },
+          });
+          tl.set("#s3-w2", { opacity: 1 }, HITS[1]);
+          tl.fromTo(
+            "#s3-w2-in",
+            { x: 760 },
+            { x: 0, duration: 0.34, ease: "expo.out", immediateRender: false },
+            HITS[1],
+          );
+          tl.fromTo(blurProxy, { v: 42 }, { v: 0, duration: 0.34, ease: "expo.out", immediateRender: false }, HITS[1]);
+          tl.to("#s3-w2-in", { x: -26, duration: 0.41, ease: "none" }, HITS[1] + 0.34);
+          tl.set("#s3-w2", { opacity: 0 }, HITS[2]);
+          document.getElementById("s3-w2-in").style.filter = "url(#s3-streak)";
+
+          // ── FUTURE. — rises while its width axis expands, then surges ────
+          var w3 = document.getElementById("s3-w3-in");
+          var axes = { _p: 0 };
+          Object.defineProperty(axes, "p", {
+            get: function () {
+              return this._p;
+            },
+            set: function (x) {
+              this._p = x;
+              var wd = 62 + (125 - 62) * x;
+              var wg = 250 + (900 - 250) * x;
+              w3.style.fontVariationSettings = '"wdth" ' + wd.toFixed(2) + ', "wght" ' + wg.toFixed(1);
+            },
+          });
+          tl.set("#s3-w3", { opacity: 1 }, HITS[2]);
+          tl.fromTo(
+            "#s3-w3-in",
+            { y: 70 },
+            { y: 0, duration: 0.62, ease: "expo.out", immediateRender: false },
+            HITS[2],
+          );
+          tl.fromTo(axes, { p: 0 }, { p: 1, duration: 0.62, ease: "expo.out", immediateRender: false }, HITS[2]);
+          // the surge: tracking opens (per-glyph x, sub-pixel) as the word
+          // scales toward the camera and softens with speed
+          var w3chars = document.querySelectorAll("#s3-w3 .ch");
+          var w3mid = (w3chars.length - 1) / 2;
+          tl.fromTo(
+            w3chars,
+            { x: 0 },
+            {
+              x: function (i) {
+                return (i - w3mid) * 0.16 * 286;
+              },
+              duration: 0.45,
+              ease: "power2.in",
+              immediateRender: false,
+            },
+            2.55,
+          );
+          tl.fromTo(
+            "#s3-w3",
+            { scale: 1, filter: "blur(0px)" },
+            { scale: 1.2, filter: "blur(3px)", duration: 0.45, ease: "power2.in", immediateRender: false },
+            2.55,
+          );
+
+          // ── rhythm chrome (text stepped by the canvas driver) ───────────
+          tl.fromTo("#s3-index", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, HITS[0] + 0.05);
+          tl.to("#s3-index", { opacity: 0, duration: 0.2, ease: "power2.in" }, 2.6);
+
+          draw(0);
+          axes.p = 0;
+          window.__timelines["s3-velocity"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

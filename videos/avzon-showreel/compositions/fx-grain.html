@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · FX Film Grain</title>
+  </head>
+  <body>
+    <template id="fx-grain-template">
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+        #gr-canvas {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+        }
+      </style>
+
+      <div id="root" data-composition-id="fx-grain" data-width="1920" data-height="1080" data-duration="15">
+        <canvas id="gr-canvas" width="1920" height="1080" data-layout-ignore></canvas>
+      </div>
+
+      <script>
+        (function () {
+          // ── Film grain: a seeded gaussian tile, re-offset at 24 Hz ───────
+          // Composited soft-light by the host slot. Beyond texture, it dithers
+          // the dark radial glows so they don't band under H.264.
+          var DUR = 15;
+          var TILE = 384;
+          var tl = gsap.timeline({ paused: true });
+
+          function mulberry32(seed) {
+            return function () {
+              seed |= 0;
+              seed = (seed + 0x6d2b79f5) | 0;
+              var r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+              r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+              return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+            };
+          }
+          function hash01(a, b) {
+            var h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+            h ^= h >>> 16;
+            h = Math.imul(h, 0x7feb352d);
+            h ^= h >>> 15;
+            return (h >>> 0) / 4294967296;
+          }
+
+          var canvas = document.getElementById("gr-canvas");
+          var gctx = canvas.getContext("2d");
+          var tile = document.createElement("canvas");
+          tile.width = TILE;
+          tile.height = TILE;
+          var tctx = tile.getContext("2d");
+          var img = tctx.createImageData(TILE, TILE);
+          var rng = mulberry32(7331);
+          for (var p = 0; p < TILE * TILE; p++) {
+            var n = (rng() + rng() + rng()) / 3; // ≈ gaussian around mid-grey
+            var v = Math.max(0, Math.min(255, Math.round(128 + (n - 0.5) * 300)));
+            img.data[p * 4] = v;
+            img.data[p * 4 + 1] = v;
+            img.data[p * 4 + 2] = v;
+            img.data[p * 4 + 3] = 255;
+          }
+          tctx.putImageData(img, 0, 0);
+          var pattern = gctx.createPattern(tile, "repeat");
+
+          function draw(t) {
+            var step = Math.floor(t * 24 + 1e-6);
+            var ox = Math.floor(hash01(step, 11) * TILE);
+            var oy = Math.floor(hash01(step, 29) * TILE);
+            gctx.setTransform(1, 0, 0, 1, ox, oy);
+            gctx.fillStyle = pattern;
+            gctx.fillRect(-ox, -oy, 1920, 1080);
+          }
+          var drv = { _t: 0 };
+          Object.defineProperty(drv, "t", {
+            get: function () {
+              return this._t;
+            },
+            set: function (v) {
+              this._t = v;
+              draw(v);
+            },
+          });
+          tl.fromTo(drv, { t: 0 }, { t: DUR, duration: DUR, ease: "none" }, 0);
+          draw(0);
+          window.__timelines["fx-grain"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

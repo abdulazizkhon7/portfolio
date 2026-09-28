@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · S1 Ignition</title>
+  </head>
+  <body>
+    <template id="s1-ignition-template">
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: #050608;
+        }
+        #s1-cam {
+          position: absolute;
+          inset: 0;
+          transform-origin: 960px 760px;
+          will-change: transform;
+        }
+        #s1-canvas {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+        }
+        #s1-vig {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(
+            ellipse 78% 74% at 50% 50%,
+            rgba(5, 6, 8, 0) 55%,
+            rgba(5, 6, 8, 0.34) 82%,
+            rgba(5, 6, 8, 0.7) 100%
+          );
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="s1-ignition"
+        data-width="1920"
+        data-height="1080"
+        data-duration="2.5"
+      >
+        <div id="s1-cam" data-layout-allow-overflow>
+          <canvas id="s1-canvas" width="1920" height="1080"></canvas>
+        </div>
+        <div id="s1-vig" data-layout-ignore></div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Scene 1 · IGNITION ────────────────────────────────────────────
+          // First light breaking over the limb of an unseen world. Everything on
+          // the canvas is a closed-form function of scene time t, repainted from
+          // a property SETTER on a linearly tweened driver: GSAP suppresses
+          // callbacks on seek, but always writes tweened values.
+          var DUR = 2.5;
+          var W = 1920;
+          var H = 1080;
+          var TAU = Math.PI * 2;
+
+          var SUN_X = 960;
+          var LIMB_Y = 760;
+          var RP = 3200; // planet radius
+          var PX = SUN_X;
+          var PY = LIMB_Y + RP;
+
+          var ION = [75, 95, 255];
+          var ION_T = [154, 166, 255];
+          var POR = [242, 240, 235];
+
+          function clamp01(v) {
+            return v < 0 ? 0 : v > 1 ? 1 : v;
+          }
+          function prog(t, a, b) {
+            return clamp01((t - a) / (b - a));
+          }
+          var expoOut = gsap.parseEase("expo.out");
+          var p2Out = gsap.parseEase("power2.out");
+          var p2In = gsap.parseEase("power2.in");
+          var sineIO = gsap.parseEase("sine.inOut");
+          function rgba(c, a) {
+            return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a < 0 ? 0 : a > 1 ? 1 : a).toFixed(4) + ")";
+          }
+
+          // Seeded PRNG (mulberry32): deterministic dust field.
+          function mulberry32(seed) {
+            return function () {
+              seed |= 0;
+              seed = (seed + 0x6d2b79f5) | 0;
+              var r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+              r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+              return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+            };
+          }
+          var rng = mulberry32(20260928);
+          var DUST = [];
+          for (var i = 0; i < 56; i++) {
+            DUST.push({
+              x: rng() * W,
+              y: 40 + Math.pow(rng(), 0.8) * 640,
+              r: rng() < 0.2 ? 2 : 1.25,
+              a: 0.12 + rng() * 0.3,
+              f: 0.35 + rng() * 1.1,
+              p: rng(),
+            });
+          }
+
+          var canvas = document.getElementById("s1-canvas");
+          var ctx = canvas.getContext("2d");
+
+          // Offscreen buffers: atmosphere (full res, masked) and the anamorphic
+          // streak (quarter res; bilinear upscale gives the soft vertical falloff).
+          var atmo = document.createElement("canvas");
+          atmo.width = W;
+          atmo.height = H;
+          var actx = atmo.getContext("2d");
+          var RS = 0.25;
+          var SW = W * RS;
+          var SH = H * RS;
+          var streak = document.createElement("canvas");
+          streak.width = SW;
+          streak.height = SH;
+          var sctx = streak.getContext("2d");
+
+          // Visible limb spans ±ARC radians around 12 o'clock.
+          var ARC = Math.asin(1180 / RP);
+
+          function swellAt(t) {
+            // the sun swells into the transition burn
+            return p2In(prog(t, 2.02, 2.5));
+          }
+
+          function draw(t) {
+            var spread = p2Out(prog(t, 0.2, 1.45)); // rim light spreading from the sun
+            var ignite = expoOut(prog(t, 0.28, 0.9)); // sun core
+            var streakP = expoOut(prog(t, 0.34, 1.4)); // anamorphic extension
+            var atmP = sineIO(prog(t, 0.7, 2.0)); // atmosphere breathing up
+            var swell = swellAt(t);
+            var breathe = 1 + 0.04 * Math.sin(TAU * 0.6 * t);
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.fillStyle = "#050608";
+            ctx.fillRect(0, 0, W, H);
+
+            // 1 · dust (the planet disc occludes anything below the limb)
+            var dustIn = p2Out(prog(t, 0.05, 1.1));
+            for (var k = 0; k < DUST.length; k++) {
+              var d = DUST[k];
+              var tw = 0.55 + 0.45 * Math.sin(TAU * (d.f * t + d.p));
+              ctx.fillStyle = rgba(POR, d.a * tw * dustIn);
+              ctx.fillRect(d.x, d.y, d.r, d.r);
+            }
+
+            // 2 · atmospheric scatter hugging the limb, brightest near the sun
+            if (atmP > 0.001 || spread > 0.001) {
+              var aAmt = 0.25 * spread + 0.75 * atmP;
+              actx.setTransform(1, 0, 0, 1, 0, 0);
+              actx.globalCompositeOperation = "source-over";
+              actx.clearRect(0, 0, W, H);
+              var ag = actx.createRadialGradient(PX, PY, RP - 2, PX, PY, RP + 230);
+              ag.addColorStop(0, rgba(ION, 0.62 * aAmt));
+              ag.addColorStop(0.06, rgba(ION, 0.34 * aAmt));
+              ag.addColorStop(0.25, rgba(ION, 0.12 * aAmt));
+              ag.addColorStop(0.6, rgba(ION, 0.035 * aAmt));
+              ag.addColorStop(1, rgba(ION, 0));
+              actx.fillStyle = ag;
+              // full height: the limb curves below LIMB_Y toward the edges, and
+              // the planet disc (drawn later) occludes everything inside it
+              actx.fillRect(0, 0, W, H);
+              // horizontal falloff mask, widening as the light spreads
+              var half = 260 + 900 * spread;
+              var mg = actx.createLinearGradient(SUN_X - half, 0, SUN_X + half, 0);
+              mg.addColorStop(0, "rgba(0,0,0,0.12)");
+              mg.addColorStop(0.5, "rgba(0,0,0,1)");
+              mg.addColorStop(1, "rgba(0,0,0,0.12)");
+              actx.globalCompositeOperation = "destination-in";
+              actx.fillStyle = mg;
+              actx.fillRect(0, 0, W, H);
+              ctx.globalCompositeOperation = "lighter";
+              ctx.drawImage(atmo, 0, 0);
+              ctx.globalCompositeOperation = "source-over";
+            }
+
+            // 3 · sun bloom, drawn before the disc so the limb cuts it
+            if (ignite > 0.001) {
+              var bR = (230 + 90 * swell) * (0.55 + 0.45 * ignite) * breathe;
+              var bg = ctx.createRadialGradient(SUN_X, LIMB_Y, 0, SUN_X, LIMB_Y, bR * (1 + 1.4 * swell));
+              bg.addColorStop(0, rgba(POR, (0.55 + 0.45 * swell) * ignite));
+              bg.addColorStop(0.08, rgba(ION_T, (0.32 + 0.4 * swell) * ignite));
+              bg.addColorStop(0.35, rgba(ION, (0.1 + 0.25 * swell) * ignite));
+              bg.addColorStop(1, rgba(ION, 0));
+              ctx.globalCompositeOperation = "lighter";
+              ctx.fillStyle = bg;
+              ctx.fillRect(0, 0, W, H);
+              ctx.globalCompositeOperation = "source-over";
+            }
+
+            // 4 · the planet disc, with faint earthshine just inside the limb
+            ctx.beginPath();
+            ctx.arc(PX, PY, RP, 0, TAU);
+            ctx.fillStyle = "#030405";
+            ctx.fill();
+            var es = ctx.createRadialGradient(PX, PY, RP - 140, PX, PY, RP);
+            es.addColorStop(0, rgba(ION, 0));
+            es.addColorStop(1, rgba(ION, 0.1 * (0.3 * spread + 0.7 * atmP)));
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(PX, PY, RP, 0, TAU);
+            ctx.clip();
+            ctx.fillStyle = es;
+            ctx.fillRect(0, LIMB_Y - 10, W, 220);
+            ctx.restore();
+
+            // 5 · rim light: layered strokes, intensity falling off from the sun
+            if (spread > 0.001) {
+              var reach = 40 + 1150 * spread;
+              var layers = [
+                [26, ION, 0.07],
+                [11, ION, 0.16],
+                [4.5, ION_T, 0.42],
+                [1.8, POR, 1.0],
+              ];
+              for (var L = 0; L < layers.length; L++) {
+                var lw = layers[L][0];
+                var col = layers[L][1];
+                var amax = layers[L][2] * (0.35 + 0.65 * spread) * (1 + 0.35 * swell);
+                var lg = ctx.createLinearGradient(SUN_X - reach, 0, SUN_X + reach, 0);
+                lg.addColorStop(0, rgba(col, 0));
+                lg.addColorStop(0.3, rgba(col, amax * 0.35));
+                lg.addColorStop(0.5, rgba(col, amax));
+                lg.addColorStop(0.7, rgba(col, amax * 0.35));
+                lg.addColorStop(1, rgba(col, 0));
+                ctx.strokeStyle = lg;
+                ctx.lineWidth = lw;
+                ctx.beginPath();
+                ctx.arc(PX, PY, RP - lw * 0.15, -Math.PI / 2 - ARC, -Math.PI / 2 + ARC);
+                ctx.stroke();
+              }
+            }
+
+            // 6 · sun core, cut by the limb (sunrise: the lower half is hidden)
+            if (ignite > 0.001) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(0, 0, W, H);
+              ctx.arc(PX, PY, RP, 0, TAU, true);
+              ctx.clip("evenodd");
+              var cR = (16 + 22 * swell) * (0.4 + 0.6 * ignite) * breathe;
+              var cg = ctx.createRadialGradient(SUN_X, LIMB_Y + 3, 0, SUN_X, LIMB_Y + 3, cR * 2.6);
+              cg.addColorStop(0, rgba([255, 255, 255], ignite));
+              cg.addColorStop(0.3, rgba(POR, 0.95 * ignite));
+              cg.addColorStop(0.55, rgba(ION_T, 0.35 * ignite));
+              cg.addColorStop(1, rgba(ION, 0));
+              ctx.globalCompositeOperation = "lighter";
+              ctx.fillStyle = cg;
+              ctx.fillRect(SUN_X - cR * 3, LIMB_Y - cR * 3, cR * 6, cR * 6);
+              ctx.restore();
+              ctx.globalCompositeOperation = "source-over";
+            }
+
+            // 7 · anamorphic streak: closed-form tent in a quarter-res buffer
+            if (streakP > 0.001) {
+              var halfLen = (60 + 900 * streakP) * (1 + 0.55 * swell);
+              sctx.setTransform(1, 0, 0, 1, 0, 0);
+              sctx.clearRect(0, 0, SW, SH);
+              sctx.globalCompositeOperation = "lighter";
+              var bands = [
+                [7.0, ION, 0.34],
+                [3.2, ION_T, 0.55],
+                [1.4, POR, 0.8],
+              ];
+              for (var b = 0; b < bands.length; b++) {
+                var bh = bands[b][0] * (1 + 0.8 * swell);
+                var ba = bands[b][2] * (0.5 + 0.5 * ignite) * (1 + 0.5 * swell);
+                var tg = sctx.createLinearGradient((SUN_X - halfLen) * RS, 0, (SUN_X + halfLen) * RS, 0);
+                tg.addColorStop(0, rgba(bands[b][1], 0));
+                tg.addColorStop(0.5, rgba(bands[b][1], ba));
+                tg.addColorStop(1, rgba(bands[b][1], 0));
+                sctx.fillStyle = tg;
+                sctx.fillRect((SUN_X - halfLen) * RS, (LIMB_Y - 1) * RS - bh / 2, halfLen * 2 * RS, bh);
+              }
+              ctx.globalCompositeOperation = "lighter";
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = "high";
+              ctx.drawImage(streak, 0, 0, SW, SH, 0, 0, W, H);
+              // crisp hairline core at full resolution
+              var hl = halfLen * 0.72;
+              var hg = ctx.createLinearGradient(SUN_X - hl, 0, SUN_X + hl, 0);
+              hg.addColorStop(0, rgba(POR, 0));
+              hg.addColorStop(0.5, rgba([255, 255, 255], 0.75 * ignite));
+              hg.addColorStop(1, rgba(POR, 0));
+              ctx.fillStyle = hg;
+              ctx.fillRect(SUN_X - hl, LIMB_Y - 2, hl * 2, 1.5);
+              ctx.globalCompositeOperation = "source-over";
+            }
+          }
+
+          var tl = gsap.timeline({ paused: true });
+
+          // Canvas driver: the setter repaints on every render, seeks included.
+          var drv = { _t: 0 };
+          Object.defineProperty(drv, "t", {
+            get: function () {
+              return this._t;
+            },
+            set: function (v) {
+              this._t = v;
+              draw(v);
+            },
+          });
+          tl.fromTo(drv, { t: 0 }, { t: DUR, duration: DUR, ease: "none" }, 0);
+
+          // Camera: slow push toward the sun while the viewpoint rises (the
+          // horizon sinks a touch). One continuous move, no settle.
+          tl.fromTo(
+            "#s1-cam",
+            { scale: 1.0, y: 0 },
+            { scale: 1.075, y: 16, duration: DUR, ease: "sine.inOut" },
+            0,
+          );
+
+          draw(0);
+          window.__timelines["s1-ignition"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

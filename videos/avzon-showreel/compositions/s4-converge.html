@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AVZON · S4 Convergence</title>
+  </head>
+  <body>
+    <template id="s4-converge-template">
+      <style>
+        #root {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          background: #050608;
+        }
+        #s4-canvas {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 1920px;
+          height: 1080px;
+        }
+        #s4-stage {
+          position: absolute;
+          inset: 0;
+          perspective: 1400px;
+          perspective-origin: 960px 540px;
+        }
+        .s4-glyph {
+          position: absolute;
+          left: 860px;
+          top: 440px;
+          width: 200px;
+          height: 200px;
+          overflow: visible;
+          transform-style: preserve-3d;
+          will-change: transform, opacity;
+        }
+        .s4-glyph path {
+          fill: none;
+          stroke: #f2f0eb;
+          stroke-width: 3.2;
+          stroke-linejoin: miter;
+          vector-effect: non-scaling-stroke;
+        }
+        .s4-glyph.ion path {
+          stroke: #9aa6ff;
+        }
+        #s4-vig {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: radial-gradient(
+            ellipse 78% 74% at 50% 50%,
+            rgba(5, 6, 8, 0) 55%,
+            rgba(5, 6, 8, 0.34) 82%,
+            rgba(5, 6, 8, 0.7) 100%
+          );
+        }
+      </style>
+
+      <div
+        id="root"
+        data-composition-id="s4-converge"
+        data-width="1920"
+        data-height="1080"
+        data-duration="1.5"
+      >
+        <canvas id="s4-canvas" width="1920" height="1080" data-layout-allow-overflow></canvas>
+        <div id="s4-vig" data-layout-ignore></div>
+        <div id="s4-stage">
+          <!-- the five primitives of the mark, as outlines -->
+          <svg class="s4-glyph" id="s4-g1" viewBox="0 0 200 200">
+            <path d="M 0 200 82.16 0 117.84 0 200 200 164.32 200 100 43.42 35.68 200 Z" />
+          </svg>
+          <svg class="s4-glyph ion" id="s4-g2" viewBox="0 0 200 200">
+            <path d="M 0 0 82.16 200 117.84 200 200 0 164.32 0 100 156.58 35.68 0 Z" />
+          </svg>
+          <svg class="s4-glyph" id="s4-g3" viewBox="0 0 200 200">
+            <path d="M 0 0 200 0 200 33 49.61 167 200 167 200 200 0 200 0 167 150.39 33 0 33 Z" />
+          </svg>
+          <svg class="s4-glyph" id="s4-g4" viewBox="-1.5 -1.5 203 203">
+            <path
+              fill-rule="evenodd"
+              d="M -1.5 100 A 101.5 101.5 0 1 1 201.5 100 A 101.5 101.5 0 1 1 -1.5 100 Z M 32.82 100 A 67.18 67.18 0 1 0 167.18 100 A 67.18 67.18 0 1 0 32.82 100 Z"
+            />
+          </svg>
+          <svg class="s4-glyph ion" id="s4-g5" viewBox="0 0 200 200">
+            <path d="M 200 0 200 200 167 200 33 49.61 33 200 0 200 0 0 33 0 167 150.39 167 0 Z" />
+          </svg>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          // ── Scene 4 · CONVERGENCE ─────────────────────────────────────────
+          // Everything is pulled into one point. Particles ride log-spiral paths
+          // whose angular speed rises as radius falls (angular momentum), all as
+          // closed-form functions of t. Then vacuum, then a charging pinpoint.
+          var DUR = 1.5;
+          var W = 1920;
+          var H = 1080;
+          var TAU = Math.PI * 2;
+          var CX = 960;
+          var CY = 540;
+          var COLLAPSE = 1.12; // everything reaches the center here
+
+          function clamp01(v) {
+            return v < 0 ? 0 : v > 1 ? 1 : v;
+          }
+          function rgb(r, g, b, a) {
+            return "rgba(" + r + "," + g + "," + b + "," + clamp01(a).toFixed(4) + ")";
+          }
+          var p2In = gsap.parseEase("power2.in");
+          var p3In = gsap.parseEase("power3.in");
+          function mulberry32(seed) {
+            return function () {
+              seed |= 0;
+              seed = (seed + 0x6d2b79f5) | 0;
+              var r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+              r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+              return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+            };
+          }
+          var rng = mulberry32(8500);
+          var PARTS = [];
+          for (var i = 0; i < 700; i++) {
+            PARTS.push({
+              th: rng() * TAU,
+              r0: 180 + Math.pow(rng(), 0.7) * 1250,
+              delay: rng() * 0.28,
+              w: 0.2 + rng() * 0.35,
+              a: 0.25 + rng() * 0.6,
+              ion: rng() < 0.14,
+              sz: rng() < 0.08 ? 2.2 : 1.3,
+            });
+          }
+          var LINES = [];
+          for (var j = 0; j < 40; j++) {
+            LINES.push({ th: (j / 40) * TAU + rng() * 0.08, len: 160 + rng() * 360, off: rng() * 0.25 });
+          }
+
+          function pos(p, t) {
+            var u = clamp01((t - p.delay) / (COLLAPSE - p.delay));
+            var k = p2In(u);
+            var r = p.r0 * (1 - k);
+            // angular momentum: spin rises as the radius shrinks
+            var th = p.th + p.w * (1 / (r / p.r0 + 0.06) - 1) * 0.55;
+            return [CX + Math.cos(th) * r, CY + Math.sin(th) * r * 0.86, r];
+          }
+
+          var canvas = document.getElementById("s4-canvas");
+          var ctx = canvas.getContext("2d");
+
+          function draw(t) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.fillStyle = "#050608";
+            ctx.fillRect(0, 0, W, H);
+
+            var vac = clamp01((t - COLLAPSE) / 0.2); // vacuum: the frame empties
+            // central pull glow, fading into the vacuum
+            var pull = p2In(clamp01(t / COLLAPSE));
+            var g = ctx.createRadialGradient(CX, CY, 0, CX, CY, 700 * (1 - 0.8 * pull) + 40);
+            g.addColorStop(0, rgb(154, 166, 255, (0.18 + 0.4 * pull) * (1 - vac)));
+            g.addColorStop(0.3, rgb(75, 95, 255, 0.1 * (1 - vac)));
+            g.addColorStop(1, rgb(75, 95, 255, 0));
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.globalCompositeOperation = "lighter";
+            // radial implosion lines: outer ends race inward
+            for (var q = 0; q < LINES.length; q++) {
+              var L = LINES[q];
+              var uL = clamp01((t - L.off) / (COLLAPSE - L.off));
+              var rOut = 1250 * (1 - p3In(uL));
+              var rIn = Math.max(0, rOut - L.len * (0.4 + uL));
+              if (rOut < 2) continue;
+              var c = Math.cos(L.th);
+              var s = Math.sin(L.th);
+              var lg = ctx.createLinearGradient(CX + c * rOut, CY + s * rOut, CX + c * rIn, CY + s * rIn);
+              lg.addColorStop(0, rgb(242, 240, 235, 0));
+              lg.addColorStop(1, rgb(242, 240, 235, 0.35 * (0.4 + uL)));
+              ctx.strokeStyle = lg;
+              ctx.lineWidth = 1.2;
+              ctx.beginPath();
+              ctx.moveTo(CX + c * rOut, CY + s * rOut);
+              ctx.lineTo(CX + c * rIn, CY + s * rIn);
+              ctx.stroke();
+            }
+            // particles with short motion streaks
+            for (var k = 0; k < PARTS.length; k++) {
+              var p = PARTS[k];
+              var a = pos(p, t);
+              if (a[2] < 1.5) continue;
+              var b = pos(p, Math.max(0, t - 0.035));
+              var al = p.a * (0.8 + 0.2 * Math.min(1, t / 0.1)) * (0.6 + 0.4 * (1 - a[2] / p.r0));
+              var col = p.ion ? [154, 166, 255] : [242, 240, 235];
+              ctx.strokeStyle = rgb(col[0], col[1], col[2], al);
+              ctx.lineWidth = p.sz;
+              ctx.beginPath();
+              ctx.moveTo(b[0], b[1]);
+              ctx.lineTo(a[0] + 0.01, a[1]);
+              ctx.stroke();
+              // a visible head, so slow early particles still read as a field
+              ctx.fillStyle = rgb(col[0], col[1], col[2], Math.min(1, al * 1.3));
+              ctx.fillRect(a[0] - p.sz * 0.75, a[1] - p.sz * 0.75, p.sz * 1.5, p.sz * 1.5);
+            }
+            // the singularity: a tiny ring that spins up, then a charging point
+            var rr = 70 * (1 - p2In(clamp01(t / COLLAPSE)));
+            if (rr > 1) {
+              ctx.strokeStyle = rgb(242, 240, 235, 0.8);
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(CX, CY, rr, 0, TAU);
+              ctx.stroke();
+              var spin = t * 22;
+              ctx.strokeStyle = rgb(255, 255, 255, 0.95);
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.arc(CX, CY, rr, spin, spin + 0.9);
+              ctx.stroke();
+            }
+            var charge = clamp01((t - 1.22) / 0.28);
+            if (t > COLLAPSE - 0.05) {
+              var pr = 2 + 10 * charge * charge;
+              var pg = ctx.createRadialGradient(CX, CY, 0, CX, CY, pr * 9);
+              pg.addColorStop(0, rgb(255, 255, 255, 0.5 + 0.5 * charge));
+              pg.addColorStop(0.12, rgb(242, 240, 235, 0.5 * (0.4 + charge)));
+              pg.addColorStop(0.4, rgb(75, 95, 255, 0.25 * charge));
+              pg.addColorStop(1, rgb(75, 95, 255, 0));
+              ctx.fillStyle = pg;
+              ctx.fillRect(CX - pr * 9, CY - pr * 9, pr * 18, pr * 18);
+              // horizontal flare line charging toward the impact
+              var fl = 40 + 900 * charge * charge * charge;
+              var fg = ctx.createLinearGradient(CX - fl, 0, CX + fl, 0);
+              fg.addColorStop(0, rgb(154, 166, 255, 0));
+              fg.addColorStop(0.5, rgb(255, 255, 255, 0.35 + 0.6 * charge));
+              fg.addColorStop(1, rgb(154, 166, 255, 0));
+              ctx.fillStyle = fg;
+              ctx.fillRect(CX - fl, CY - 1, fl * 2, 2);
+            }
+            ctx.globalCompositeOperation = "source-over";
+          }
+
+          var tl = gsap.timeline({ paused: true });
+          var drv = { _t: 0 };
+          Object.defineProperty(drv, "t", {
+            get: function () {
+              return this._t;
+            },
+            set: function (v) {
+              this._t = v;
+              draw(v);
+            },
+          });
+          tl.fromTo(drv, { t: 0 }, { t: DUR, duration: DUR, ease: "none" }, 0);
+
+          // the five primitives tumble in from a scattered depth cloud
+          var START = [
+            { x: -760, y: -300, z: 260, rx: 62, ry: -48, rz: -30 },
+            { x: 700, y: -340, z: -180, rx: -55, ry: 70, rz: 40 },
+            { x: -640, y: 330, z: -320, rx: 48, ry: 64, rz: 120 },
+            { x: 120, y: -420, z: 380, rx: 75, ry: -20, rz: 0 },
+            { x: 780, y: 300, z: 120, rx: -64, ry: -52, rz: -110 },
+          ];
+          START.forEach(function (s, idx) {
+            var sel = "#s4-g" + (idx + 1);
+            tl.fromTo(
+              sel,
+              { x: s.x, y: s.y, z: s.z, rotationX: s.rx, rotationY: s.ry, rotation: s.rz, scale: 1.35, opacity: 0 },
+              {
+                x: 0,
+                y: 0,
+                z: -900,
+                rotationX: s.rx * -1.6,
+                rotationY: s.ry * 1.8,
+                rotation: s.rz + (idx % 2 ? 260 : -260),
+                scale: 0.05,
+                duration: COLLAPSE - 0.04 * idx,
+                ease: "power2.in",
+                immediateRender: true,
+              },
+              0.02 * idx,
+            );
+            tl.to(sel, { opacity: 1, duration: 0.14, ease: "power1.out" }, 0.02 * idx);
+            tl.to(sel, { opacity: 0, duration: 0.12, ease: "power1.in" }, COLLAPSE - 0.16);
+          });
+
+          draw(0);
+          window.__timelines["s4-converge"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
